@@ -57,11 +57,9 @@
 #include "ism330dlc/ism330dlc_reg.h"
 #include "SHT2x/SHT2x.h"
 #include "HTS221/HTS221Sensor.h"
-#include "HTS221/HTS221_Driver.h"
-#include "voltage/voltage.h"
+#include "analog/analog.h"
 #include <stdio.h>
 #include <stdarg.h>
-
 #include "../LoRaWAN/Core/lora.h"
 #include "../LoRaWAN/Utilities/low_power_manager.h"
 #include "../LoRaWAN/Utilities/timeServer.h"
@@ -266,15 +264,15 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_I2C2_Init();
-  MX_RTC_Init();
-  MX_SPI1_Init();
-  MX_USART3_UART_Init();
-  MX_OPAMP1_Init();
-  MX_ADC1_Init();
-  MX_OPAMP2_Init();
-  MX_ADC2_Init();
+//  MX_GPIO_Init();
+//  MX_I2C2_Init();
+//  MX_RTC_Init();
+//  MX_SPI1_Init();
+//  MX_USART3_UART_Init();
+//  MX_OPAMP1_Init();
+//  MX_ADC1_Init();
+//  MX_OPAMP2_Init();
+//  MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
 
 //  HAL_OPAMP_Start(&hopamp1);
@@ -285,6 +283,14 @@ int main(void)
 //    /* ADC Calibration Error */
 //    Error_Handler();
 //  }
+//
+//  if (HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED) !=  HAL_OK)
+//  {
+//    /* ADC Calibration Error */
+//    Error_Handler();
+//  }
+
+  HAL_Delay(1000);
 
   PRINTF("START\n");
 
@@ -370,19 +376,19 @@ int main(void)
 //  ism330dlc_gy_band_pass_set(&dev_ctx, ISM330DLC_HP_260mHz_LP1_STRONG);
 
   /* Configure the hardware*/
-  HW_Init();
-
-  /*Disbale Stand-by mode*/
-  LPM_SetOffMode(LPM_APPLI_Id , LPM_Disable );
-
-  PRINTF("VERSION: %X\n\r", VERSION);
-
-  /* Configure the Lora Stack*/
-  LORA_Init( &LoRaMainCallbacks, &LoRaParamInit);
-
-  LORA_Join();
-
-  LoraStartTx( TX_ON_TIMER) ;
+//  HW_Init();
+//
+//  /*Disbale Stand-by mode*/
+//  LPM_SetOffMode(LPM_APPLI_Id , LPM_Disable );
+//
+//  PRINTF("VERSION: %X\n\r", VERSION);
+//
+//  /* Configure the Lora Stack*/
+//  LORA_Init( &LoRaMainCallbacks, &LoRaParamInit);
+//
+//  LORA_Join();
+//
+//  LoraStartTx( TX_ON_TIMER) ;
 
   /* USER CODE END 2 */
 
@@ -396,24 +402,45 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	LoRaMacProcess( );
-	DISABLE_IRQ( );
-	/* if an interrupt has occurred after DISABLE_IRQ, it is kept pending
-	 * and cortex will not enter low power anyway  */
+//	LoRaMacProcess( );
+//	DISABLE_IRQ( );
+//	/* if an interrupt has occurred after DISABLE_IRQ, it is kept pending
+//	 * and cortex will not enter low power anyway  */
+//
+//	#ifndef LOW_POWER_DISABLE
+//		LPM_EnterLowPower( );
+//	#endif
+//
+//	ENABLE_IRQ();
 
-	#ifndef LOW_POWER_DISABLE
-		LPM_EnterLowPower( );
-	#endif
-
-	ENABLE_IRQ();
+	 uint16_t v = 0;
+	 uint8_t res = 0;
+	 res = getVIN(&v);
+	 if(res == 0)
+	 {
+		sprintf(data,"VIN ADC: %d", v);
+		PRINTF("%s\n", data);
+		sprintf(data,"VIN I: %f", (float)((double)v)*0.001611328125);
+		PRINTF("%s\n", data);
+	 }
 
 //	 uint16_t s = 0;
-//	 uint8_t res = 0;
 //	 HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
 //	 HAL_Delay(500);
+//
+//	 res = getVSTEPUP(&v);
+//	 if(res == 0)
+//	 {
+//		sprintf(data,"VSTEPUP ADC: %d", v);
+//		PRINTF("%s\n", data);
+//		sprintf(data,"VSTEPUP I: %f", (float)((double)v)*0.0072509765625);
+//		PRINTF("%s\n", data);
+//	 }
+//
+//
 //	 HAL_GPIO_WritePin(EN_PWR_OUT_GPIO_Port, EN_PWR_OUT_Pin, GPIO_PIN_RESET);
 //	 HAL_Delay(100);
-//	 res = get420(&s);
+//	 res = get420_1(&s);
 //	 HAL_Delay(100);
 //	 if(res == 0)
 //	 {
@@ -424,7 +451,7 @@ int main(void)
 //	 }
 //	 HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_RESET);
 //	 HAL_Delay(1000);
-//	 res = get420(&s);
+//	 res = get420_1(&s);
 //	 HAL_Delay(100);
 //	 if(res == 0)
 //	 {
@@ -525,7 +552,7 @@ int main(void)
 //	  PRINTF("%s\n", data);
 //	}
 
-//	  HAL_Delay(30000);
+	  HAL_Delay(20000);
   }
   /* USER CODE END 3 */
 }
@@ -534,72 +561,72 @@ int main(void)
   * @brief System Clock Configuration
   * @retval None
   */
-//void SystemClock_Config(void)
-//{
-//  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-//  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-//  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
-//
-//  /**Configure LSE Drive Capability
-//  */
-//  HAL_PWR_EnableBkUpAccess();
-//  __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_LOW);
-//  /**Initializes the CPU, AHB and APB busses clocks
-//  */
-//  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI
-//                              |RCC_OSCILLATORTYPE_LSE|RCC_OSCILLATORTYPE_MSI;
-//  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
-//  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-//  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-//  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
-//  RCC_OscInitStruct.MSIState = RCC_MSI_ON;
-//  RCC_OscInitStruct.MSICalibrationValue = 0;
-//  RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_6;
-//  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
-//  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-//  {
-//    Error_Handler();
-//  }
-//  /**Initializes the CPU, AHB and APB busses clocks
-//  */
-//  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-//                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-//  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
-//  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-//  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-//  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-//
-//  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
-//  {
-//    Error_Handler();
-//  }
-//  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_USART3
-//                              |RCC_PERIPHCLK_I2C2|RCC_PERIPHCLK_ADC;
-//  PeriphClkInit.Usart3ClockSelection = RCC_USART3CLKSOURCE_PCLK1;
-//  PeriphClkInit.I2c2ClockSelection = RCC_I2C2CLKSOURCE_PCLK1;
-//  PeriphClkInit.AdcClockSelection = RCC_ADCCLKSOURCE_PLLSAI1;
-//  PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
-//  PeriphClkInit.PLLSAI1.PLLSAI1Source = RCC_PLLSOURCE_HSI;
-//  PeriphClkInit.PLLSAI1.PLLSAI1M = 1;
-//  PeriphClkInit.PLLSAI1.PLLSAI1N = 10;
-//  PeriphClkInit.PLLSAI1.PLLSAI1P = RCC_PLLP_DIV7;
-//  PeriphClkInit.PLLSAI1.PLLSAI1Q = RCC_PLLQ_DIV2;
-//  PeriphClkInit.PLLSAI1.PLLSAI1R = RCC_PLLR_DIV2;
-//  PeriphClkInit.PLLSAI1.PLLSAI1ClockOut = RCC_PLLSAI1_ADC1CLK;
-//  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-//  {
-//    Error_Handler();
-//  }
-//  /**Configure the main internal regulator output voltage
-//  */
-//  if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1) != HAL_OK)
-//  {
-//    Error_Handler();
-//  }
-//  /**Enable MSI Auto calibration
-//  */
-//  HAL_RCCEx_EnableMSIPLLMode();
-//}
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+
+  /**Configure LSE Drive Capability 
+  */
+  HAL_PWR_EnableBkUpAccess();
+  __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_LOW);
+  /**Initializes the CPU, AHB and APB busses clocks 
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI
+                              |RCC_OSCILLATORTYPE_LSE|RCC_OSCILLATORTYPE_MSI;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
+  RCC_OscInitStruct.MSIState = RCC_MSI_ON;
+  RCC_OscInitStruct.MSICalibrationValue = 0;
+  RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_6;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /**Initializes the CPU, AHB and APB busses clocks 
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_USART3
+                              |RCC_PERIPHCLK_I2C2|RCC_PERIPHCLK_ADC;
+  PeriphClkInit.Usart3ClockSelection = RCC_USART3CLKSOURCE_PCLK1;
+  PeriphClkInit.I2c2ClockSelection = RCC_I2C2CLKSOURCE_PCLK1;
+  PeriphClkInit.AdcClockSelection = RCC_ADCCLKSOURCE_PLLSAI1;
+  PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+  PeriphClkInit.PLLSAI1.PLLSAI1Source = RCC_PLLSOURCE_HSI;
+  PeriphClkInit.PLLSAI1.PLLSAI1M = 1;
+  PeriphClkInit.PLLSAI1.PLLSAI1N = 10;
+  PeriphClkInit.PLLSAI1.PLLSAI1P = RCC_PLLP_DIV7;
+  PeriphClkInit.PLLSAI1.PLLSAI1Q = RCC_PLLQ_DIV2;
+  PeriphClkInit.PLLSAI1.PLLSAI1R = RCC_PLLR_DIV2;
+  PeriphClkInit.PLLSAI1.PLLSAI1ClockOut = RCC_PLLSAI1_ADC1CLK;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /**Configure the main internal regulator output voltage 
+  */
+  if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /**Enable MSI Auto calibration 
+  */
+  HAL_RCCEx_EnableMSIPLLMode();
+}
 
 /* USER CODE BEGIN 4 */
 

@@ -183,7 +183,7 @@ HTS221StatusTypeDef HTS221SensorGetHumidity(float* pfData)
     return HTS221_STATUS_ERROR;
   }
 
-  *pfData = ( float )uint16data / 100.0f;
+  *pfData = ( float )uint16data / 10.0f;
 
   return HTS221_STATUS_OK;
 }
@@ -203,7 +203,7 @@ HTS221StatusTypeDef HTS221SensorGetTemperature(float* pfData)
     return HTS221_STATUS_ERROR;
   }
 
-  *pfData = ( float )int16data / 100.0f;
+  *pfData = ( float )int16data / 10.0f;
 
   return HTS221_STATUS_OK;
 }

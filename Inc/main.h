@@ -88,10 +88,14 @@ void Error_Handler(void);
 #define EN_ADC_VIN_GPIO_Port GPIOC
 #define OPAMP1_ANALOG1_Pin GPIO_PIN_0
 #define OPAMP1_ANALOG1_GPIO_Port GPIOA
+#define ADC_STEPUP_Pin GPIO_PIN_1
+#define ADC_STEPUP_GPIO_Port GPIOA
 #define OPAMP2_ANALOG2_Pin GPIO_PIN_6
 #define OPAMP2_ANALOG2_GPIO_Port GPIOA
 #define LED2_Pin GPIO_PIN_7
 #define LED2_GPIO_Port GPIOA
+#define ADC_VIN_Pin GPIO_PIN_4
+#define ADC_VIN_GPIO_Port GPIOC
 #define INT_NFC_Pin GPIO_PIN_5
 #define INT_NFC_GPIO_Port GPIOC
 #define EXT_INT_Pin GPIO_PIN_1
