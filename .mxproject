@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=C:/Users/Emanuele/workspace_STM32/dighe_ST/Inc
+HeaderPath=C:/Users/Emanuele/AppData/Roaming/SPB_16.6/git/dighe_ST/Inc
 HeaderFiles=gpio.h;adc.h;can.h;i2c.h;opamp.h;rtc.h;spi.h;usart.h;stm32l4xx_it.h;stm32l4xx_hal_conf.h;main.h;
-SourcePath=C:/Users/Emanuele/workspace_STM32/dighe_ST/Src
+SourcePath=C:/Users/Emanuele/AppData/Roaming/SPB_16.6/git/dighe_ST/Src
 SourceFiles=gpio.c;adc.c;can.c;i2c.c;opamp.c;rtc.c;spi.c;usart.c;stm32l4xx_it.c;stm32l4xx_hal_msp.c;main.c;
 
 [PreviousLibFiles]

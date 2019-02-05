@@ -16,11 +16,7 @@ uint8_t get420_1(uint16_t* val)
 {
 	uint8_t ret = 0;
 	HAL_OPAMP_Start(&hopamp1);
-	if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED) !=  HAL_OK)
-	{
-		/* ADC Calibration Error */
-		Error_Handler();
-	}
+
 	ADC_ChannelConfTypeDef sConfig;
 	sConfig.Channel = ADC_CHANNEL_8;
 	sConfig.Rank = ADC_REGULAR_RANK_1;
@@ -28,6 +24,10 @@ uint8_t get420_1(uint16_t* val)
 	sConfig.SingleDiff = ADC_SINGLE_ENDED;
 	sConfig.OffsetNumber = ADC_OFFSET_NONE;
 	sConfig.Offset = 0;
+	if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+	{
+	Error_Handler();
+	}
 	ret = getADC(&hadc1, val, &sConfig);
 	HAL_OPAMP_Stop(&hopamp1);
 	return ret;
@@ -38,11 +38,7 @@ uint8_t get420_2(uint16_t* val)
 	uint8_t ret = 0;
 
 	HAL_OPAMP_Start(&hopamp2);
-	if (HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED) !=  HAL_OK)
-	{
-		/* ADC Calibration Error */
-		Error_Handler();
-	}
+
 	ADC_ChannelConfTypeDef sConfig;
 	sConfig.Channel = ADC_CHANNEL_15;
 	sConfig.Rank = ADC_REGULAR_RANK_1;
@@ -50,6 +46,10 @@ uint8_t get420_2(uint16_t* val)
 	sConfig.SingleDiff = ADC_SINGLE_ENDED;
 	sConfig.OffsetNumber = ADC_OFFSET_NONE;
 	sConfig.Offset = 0;
+	if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+	{
+	Error_Handler();
+	}
 	ret = getADC(&hadc2, val, &sConfig);
 	HAL_OPAMP_Stop(&hopamp2);
 	return ret;
@@ -65,6 +65,10 @@ uint8_t getVIN(uint16_t* val)
 	sConfig.SingleDiff = ADC_SINGLE_ENDED;
 	sConfig.OffsetNumber = ADC_OFFSET_NONE;
 	sConfig.Offset = 0;
+	if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+	{
+	Error_Handler();
+	}
 	HAL_GPIO_WritePin(EN_ADC_VIN_GPIO_Port, EN_ADC_VIN_Pin, GPIO_PIN_SET);
 	HAL_Delay(300);
 	ret = getADC(&hadc2, val, &sConfig);
@@ -75,11 +79,6 @@ uint8_t getVIN(uint16_t* val)
 uint8_t getVSTEPUP(uint16_t* val)
 {
 	uint8_t ret = 0;
-	if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED) !=  HAL_OK)
-	{
-		/* ADC Calibration Error */
-		Error_Handler();
-	}
 	ADC_ChannelConfTypeDef sConfig;
 	sConfig.Channel = ADC_CHANNEL_6;
 	sConfig.Rank = ADC_REGULAR_RANK_1;
@@ -87,6 +86,10 @@ uint8_t getVSTEPUP(uint16_t* val)
 	sConfig.SingleDiff = ADC_SINGLE_ENDED;
 	sConfig.OffsetNumber = ADC_OFFSET_NONE;
 	sConfig.Offset = 0;
+	if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+	{
+	Error_Handler();
+	}
 	ret = getADC(&hadc1, val, &sConfig);
 	return ret;
 }
@@ -95,7 +98,11 @@ uint8_t getADC(void* handler, uint16_t* val, ADC_ChannelConfTypeDef* sConfig)
 {
 	uint32_t adc_value=0;
 	long sum=0;
-
+	if (HAL_ADCEx_Calibration_Start((ADC_HandleTypeDef*)handler, ADC_SINGLE_ENDED) !=  HAL_OK)
+	{
+		/* ADC Calibration Error */
+		Error_Handler();
+	}
 	for(long i=0;i<MAX_SAMPLE_ANALOG;i++)
 	{
 

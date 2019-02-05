@@ -113,6 +113,11 @@ void HAL_OPAMP_MspInit(OPAMP_HandleTypeDef* opampHandle)
 
   /* USER CODE BEGIN OPAMP1_MspInit 1 */
 
+    GPIO_InitStruct.Pin = GPIO_PIN_3;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG_ADC_CONTROL;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
   /* USER CODE END OPAMP1_MspInit 1 */
   }
   else if(opampHandle->Instance==OPAMP2)
@@ -143,6 +148,11 @@ void HAL_OPAMP_MspInit(OPAMP_HandleTypeDef* opampHandle)
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN OPAMP2_MspInit 1 */
+
+    GPIO_InitStruct.Pin = GPIO_PIN_0;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG_ADC_CONTROL;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE END OPAMP2_MspInit 1 */
   }
