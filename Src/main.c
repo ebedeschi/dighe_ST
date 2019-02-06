@@ -323,55 +323,55 @@ int main(void)
   HTS221Sensor(&hi2c2, HTS221_I2C_ADDRESS);
   HTS221SensorEnable();
 
-//  ism330dlc_ctx_t dev_ctx;
-//  dev_ctx.write_reg = platform_write;
-//  dev_ctx.read_reg = platform_read;
-//  dev_ctx.handle = &hi2c2;
-//  /*
-//   *  Check device ID
-//   */
-//  whoamI = 0;
-//  ism330dlc_device_id_get(&dev_ctx, &whoamI);
-//  /*
-//   *  Restore default configuration
-//   */
-//  ism330dlc_reset_set(&dev_ctx, PROPERTY_ENABLE);
-//  do {
-//    ism330dlc_reset_get(&dev_ctx, &rst);
-//  } while (rst);
-//  /*
-//   *  Enable Block Data Update
-//   */
-//  ism330dlc_block_data_update_set(&dev_ctx, PROPERTY_ENABLE);
-//  /*
-//   * Set Output Data Rate
-//   */
-//  ism330dlc_xl_data_rate_set(&dev_ctx, ISM330DLC_XL_ODR_12Hz5);
-//  ism330dlc_gy_data_rate_set(&dev_ctx, ISM330DLC_GY_ODR_12Hz5);
-//  /*
-//   * Set full scale
-//   */
-//  ism330dlc_xl_full_scale_set(&dev_ctx, ISM330DLC_2g);
-//  ism330dlc_gy_full_scale_set(&dev_ctx, ISM330DLC_2000dps);
-//
-//  /*
-//   * Configure filtering chain(No aux interface)
-//   */
-//  /* Accelerometer - analog filter */
-//  ism330dlc_xl_filter_analog_set(&dev_ctx, ISM330DLC_XL_ANA_BW_400Hz);
-//
-//  /* Accelerometer - LPF1 path ( LPF2 not used )*/
-//  //ism330dlc_xl_lp1_bandwidth_set(&dev_ctx, ISM330DLC_XL_LP1_ODR_DIV_4);
-//
-//  /* Accelerometer - LPF1 + LPF2 path */
-//  ism330dlc_xl_lp2_bandwidth_set(&dev_ctx, ISM330DLC_XL_LOW_NOISE_LP_ODR_DIV_100);
-//
-//  /* Accelerometer - High Pass / Slope path */
-//  //ism330dlc_xl_reference_mode_set(&dev_ctx, PROPERTY_DISABLE);
-//  //ism330dlc_xl_hp_bandwidth_set(&dev_ctx, ISM330DLC_XL_HP_ODR_DIV_100);
-//
-//  /* Gyroscope - filtering chain */
-//  ism330dlc_gy_band_pass_set(&dev_ctx, ISM330DLC_HP_260mHz_LP1_STRONG);
+  ism330dlc_ctx_t dev_ctx;
+  dev_ctx.write_reg = platform_write;
+  dev_ctx.read_reg = platform_read;
+  dev_ctx.handle = &hi2c2;
+  /*
+   *  Check device ID
+   */
+  whoamI = 0;
+  ism330dlc_device_id_get(&dev_ctx, &whoamI);
+  /*
+   *  Restore default configuration
+   */
+  ism330dlc_reset_set(&dev_ctx, PROPERTY_ENABLE);
+  do {
+    ism330dlc_reset_get(&dev_ctx, &rst);
+  } while (rst);
+  /*
+   *  Enable Block Data Update
+   */
+  ism330dlc_block_data_update_set(&dev_ctx, PROPERTY_ENABLE);
+  /*
+   * Set Output Data Rate
+   */
+  ism330dlc_xl_data_rate_set(&dev_ctx, ISM330DLC_XL_ODR_12Hz5);
+  ism330dlc_gy_data_rate_set(&dev_ctx, ISM330DLC_GY_ODR_12Hz5);
+  /*
+   * Set full scale
+   */
+  ism330dlc_xl_full_scale_set(&dev_ctx, ISM330DLC_2g);
+  ism330dlc_gy_full_scale_set(&dev_ctx, ISM330DLC_2000dps);
+
+  /*
+   * Configure filtering chain(No aux interface)
+   */
+  /* Accelerometer - analog filter */
+  ism330dlc_xl_filter_analog_set(&dev_ctx, ISM330DLC_XL_ANA_BW_400Hz);
+
+  /* Accelerometer - LPF1 path ( LPF2 not used )*/
+  //ism330dlc_xl_lp1_bandwidth_set(&dev_ctx, ISM330DLC_XL_LP1_ODR_DIV_4);
+
+  /* Accelerometer - LPF1 + LPF2 path */
+  ism330dlc_xl_lp2_bandwidth_set(&dev_ctx, ISM330DLC_XL_LOW_NOISE_LP_ODR_DIV_100);
+
+  /* Accelerometer - High Pass / Slope path */
+  //ism330dlc_xl_reference_mode_set(&dev_ctx, PROPERTY_DISABLE);
+  //ism330dlc_xl_hp_bandwidth_set(&dev_ctx, ISM330DLC_XL_HP_ODR_DIV_100);
+
+  /* Gyroscope - filtering chain */
+  ism330dlc_gy_band_pass_set(&dev_ctx, ISM330DLC_HP_260mHz_LP1_STRONG);
 
   /* Configure the hardware*/
   HW_Init();
@@ -417,9 +417,9 @@ int main(void)
 	 if(res == 0)
 	 {
 		sprintf(data,"VIN ADC: %d", v);
-		PRINTF("%s\n", data);
+		PRINTF("%s\r\n", data);
 		sprintf(data,"VIN I: %f", ((float)v)*0.001611328125);
-		PRINTF("%s\n", data);
+		PRINTF("%s\r\n", data);
 	 }
 
 	 uint16_t s = 0;
@@ -430,22 +430,25 @@ int main(void)
 	 if(res == 0)
 	 {
 		sprintf(data,"VSTEPUP ADC: %d", v);
-		PRINTF("%s\n", data);
+		PRINTF("%s\r\n", data);
 		sprintf(data,"VSTEPUP I: %f", ((float)v)*0.0072509765625);
-		PRINTF("%s\n", data);
+		PRINTF("%s\r\n", data);
 	 }
 
 
 	 HAL_GPIO_WritePin(EN_PWR_OUT_GPIO_Port, EN_PWR_OUT_Pin, GPIO_PIN_RESET);
 	 HAL_Delay(100);
+
+	 //---S1---//
+
 	 res = get420_1(&s);
 	 HAL_Delay(100);
 	 if(res == 0)
 	 {
-		sprintf(data,"S1 ADC: %d", s);
-		PRINTF("%s\n", data);
-		sprintf(data,"S1 I: %f", (float)((double)s)*0.000008824359940);
-		PRINTF("%s\n", data);
+		sprintf(data,"S1a ADC: %d", s);
+		PRINTF("%s\r\n", data);
+		sprintf(data,"S1a I: %f", (float)((double)s)*0.000008824359940);
+		PRINTF("%s\r\n", data);
 	 }
 	 HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_RESET);
 	 HAL_Delay(1000);
@@ -453,13 +456,39 @@ int main(void)
 	 HAL_Delay(100);
 	 if(res == 0)
 	 {
-		sprintf(data,"S2 ADC: %d", s);
-		PRINTF("%s\n", data);
-		sprintf(data,"S2 I: %f", (float)((double)s)*0.000008824359940);
-		PRINTF("%s\n", data);
+		sprintf(data,"S1b ADC: %d", s);
+		PRINTF("%s\r\n", data);
+		sprintf(data,"S1b I: %f", (float)((double)s)*0.000008824359940);
+		PRINTF("%s\r\n", data);
 	 }
 	 HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_SET);
 	 HAL_Delay(100);
+
+	 //---S2---//
+
+	 res = get420_2(&s);
+	 HAL_Delay(100);
+	 if(res == 0)
+	 {
+		sprintf(data,"S2a ADC: %d", s);
+		PRINTF("%s\r\n", data);
+		sprintf(data,"S2a I: %f", (float)((double)s)*0.000008824359940);
+		PRINTF("%s\r\n", data);
+	 }
+	 HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_RESET);
+	 HAL_Delay(1000);
+	 res = get420_2(&s);
+	 HAL_Delay(100);
+	 if(res == 0)
+	 {
+		sprintf(data,"S2b ADC: %d", s);
+		PRINTF("%s\r\n", data);
+		sprintf(data,"S2b I: %f", (float)((double)s)*0.000008824359940);
+		PRINTF("%s\r\n", data);
+	 }
+	 HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_SET);
+	 HAL_Delay(100);
+
 	 HAL_GPIO_WritePin(EN_PWR_OUT_GPIO_Port, EN_PWR_OUT_Pin, GPIO_PIN_SET);
 	 HAL_Delay(100);
 	 HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
@@ -476,79 +505,61 @@ int main(void)
 //	sprintf((char*)data, "H: %6.2f\r\n", humidityH );
 //	PRINTF("%s\n", data);
 
-//	  uint8_t err = 0;
-//	  flag = 0;
-//	  uint8_t id = 0;
-//	  err = HTS221SensorReadID(&id);
-//	  sprintf((char*)data, "%d %d id: %d\r\n", flag, err, id );
-//	  PRINTF("%s\n", data);
-//	  err = 0;
-//	  flag = 0;
-//	  float temp = 5;
-//	  err = HTS221SensorGetTemperature(&temp);
-//	  sprintf((char*)data, "%d %d Temp: %6.2f\r\n", flag, err, temp );
-//	  PRINTF("%s\n", data);
-//	  sprintf((char*)data, "tout: %d\r\n", _tout );
-//	  PRINTF("%s\n", data);
-//	  sprintf((char*)data, "tout0: %d\r\n", _tout0 );
-//	  PRINTF("%s\n", data);
-//	  sprintf((char*)data, "tout1: %d\r\n", _tout1 );
-//	  PRINTF("%s\n", data);
-//	  err = 0;
-//	  flag = 0;
-//	  float hum = 0;
-//	  err = HTS221SensorGetHumidity(&hum);
-//	  sprintf((char*)data, "%d %d Hum: %6.2f\r\n", flag, err, hum );
-//	  PRINTF("%s\n", data);
-//	  err = 0;
-//	  flag = 0;
-//	  float odr = 0;
-//	  err = HTS221SensorGetODR(&odr);
-//	  sprintf((char*)data, "%d %d odr: %6.2f\r\n", flag, err, odr );
-//	  PRINTF("%s\n", data);
+	uint8_t id = 0;
+	HTS221SensorReadID(&id);
+	sprintf((char*)data, "id: %d", id );
+	PRINTF("%s\r\n", data);
+	float temp = 0;
+	HTS221SensorGetTemperature(&temp);
+	sprintf((char*)data, "Temp: %6.2f", temp );
+	PRINTF("%s\r\n", data);
+	float hum = 0;
+	HTS221SensorGetHumidity(&hum);
+	sprintf((char*)data, "Hum: %6.2f", hum );
+	PRINTF("%s\r\n", data);
 
 	/*
 	 * Read output only if new value is available
 	 */
-//	ism330dlc_reg_t reg;
-//	ism330dlc_status_reg_get(&dev_ctx, &reg.status_reg);
-//
-//	if (reg.status_reg.xlda)
-//	{
-//	  /* Read magnetic field data */
-//	  memset(data_raw_acceleration.u8bit, 0x00, 3*sizeof(int16_t));
-//	  ism330dlc_acceleration_raw_get(&dev_ctx, data_raw_acceleration.u8bit);
-//	  acceleration_mg[0] = ISM330DLC_FROM_FS_2g_TO_mg( data_raw_acceleration.i16bit[0]);
-//	  acceleration_mg[1] = ISM330DLC_FROM_FS_2g_TO_mg( data_raw_acceleration.i16bit[1]);
-//	  acceleration_mg[2] = ISM330DLC_FROM_FS_2g_TO_mg( data_raw_acceleration.i16bit[2]);
-//
-//	  sprintf((char*)data, "Acceleration [mg]:%4.2f\t%4.2f\t%4.2f\r\n",
-//			  acceleration_mg[0], acceleration_mg[1], acceleration_mg[2]);
-//	  PRINTF("%s\n", data);
-//	}
-//	if (reg.status_reg.gda)
-//	{
-//	  /* Read magnetic field data */
-//	  memset(data_raw_angular_rate.u8bit, 0x00, 3*sizeof(int16_t));
-//	  ism330dlc_angular_rate_raw_get(&dev_ctx, data_raw_angular_rate.u8bit);
-//	  angular_rate_mdps[0] = ISM330DLC_FROM_FS_2000dps_TO_mdps(data_raw_angular_rate.i16bit[0]);
-//	  angular_rate_mdps[1] = ISM330DLC_FROM_FS_2000dps_TO_mdps(data_raw_angular_rate.i16bit[1]);
-//	  angular_rate_mdps[2] = ISM330DLC_FROM_FS_2000dps_TO_mdps(data_raw_angular_rate.i16bit[2]);
-//
-//	  sprintf((char*)data, "Angular rate [mdps]:%4.2f\t%4.2f\t%4.2f\r\n",
-//			  angular_rate_mdps[0], angular_rate_mdps[1], angular_rate_mdps[2]);
-//	  PRINTF("%s\n", data);
-//	}
-//	if (reg.status_reg.tda)
-//	{
-//	  /* Read temperature data */
-//	  memset(data_raw_temperature.u8bit, 0x00, sizeof(int16_t));
-//	  ism330dlc_temperature_raw_get(&dev_ctx, data_raw_temperature.u8bit);
-//	  temperature_degC = ISM330DLC_FROM_LSB_TO_degC( data_raw_temperature.i16bit );
-//
-//	  sprintf((char*)data, "Temperature [degC]:%6.2f\r\n", temperature_degC );
-//	  PRINTF("%s\n", data);
-//	}
+	ism330dlc_reg_t reg;
+	ism330dlc_status_reg_get(&dev_ctx, &reg.status_reg);
+
+	if (reg.status_reg.xlda)
+	{
+	  /* Read magnetic field data */
+	  memset(data_raw_acceleration.u8bit, 0x00, 3*sizeof(int16_t));
+	  ism330dlc_acceleration_raw_get(&dev_ctx, data_raw_acceleration.u8bit);
+	  acceleration_mg[0] = ISM330DLC_FROM_FS_2g_TO_mg( data_raw_acceleration.i16bit[0]);
+	  acceleration_mg[1] = ISM330DLC_FROM_FS_2g_TO_mg( data_raw_acceleration.i16bit[1]);
+	  acceleration_mg[2] = ISM330DLC_FROM_FS_2g_TO_mg( data_raw_acceleration.i16bit[2]);
+
+	  sprintf((char*)data, "Acceleration [mg]:%4.2f\t%4.2f\t%4.2f",
+			  acceleration_mg[0], acceleration_mg[1], acceleration_mg[2]);
+	  PRINTF("%s\r\n", data);
+	}
+	if (reg.status_reg.gda)
+	{
+	  /* Read magnetic field data */
+	  memset(data_raw_angular_rate.u8bit, 0x00, 3*sizeof(int16_t));
+	  ism330dlc_angular_rate_raw_get(&dev_ctx, data_raw_angular_rate.u8bit);
+	  angular_rate_mdps[0] = ISM330DLC_FROM_FS_2000dps_TO_mdps(data_raw_angular_rate.i16bit[0]);
+	  angular_rate_mdps[1] = ISM330DLC_FROM_FS_2000dps_TO_mdps(data_raw_angular_rate.i16bit[1]);
+	  angular_rate_mdps[2] = ISM330DLC_FROM_FS_2000dps_TO_mdps(data_raw_angular_rate.i16bit[2]);
+
+	  sprintf((char*)data, "Angular rate [mdps]:%4.2f\t%4.2f\t%4.2f",
+			  angular_rate_mdps[0], angular_rate_mdps[1], angular_rate_mdps[2]);
+	  PRINTF("%s\r\n", data);
+	}
+	if (reg.status_reg.tda)
+	{
+	  /* Read temperature data */
+	  memset(data_raw_temperature.u8bit, 0x00, sizeof(int16_t));
+	  ism330dlc_temperature_raw_get(&dev_ctx, data_raw_temperature.u8bit);
+	  temperature_degC = ISM330DLC_FROM_LSB_TO_degC( data_raw_temperature.i16bit );
+
+	  sprintf((char*)data, "Temperature [degC]:%6.2f", temperature_degC );
+	  PRINTF("%s\r\n", data);
+	}
 
 	  HAL_Delay(20000);
   }
