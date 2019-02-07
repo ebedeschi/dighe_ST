@@ -55,7 +55,6 @@
 #include "vcom.h"
 #include "version.h"
 #include "ism330dlc/ism330dlc_reg.h"
-#include "SHT2x/SHT2x.h"
 #include "HTS221/HTS221Sensor.h"
 #include "analog/analog.h"
 #include <stdio.h>
@@ -411,99 +410,87 @@ int main(void)
 //
 //	ENABLE_IRQ();
 
-	 uint16_t v = 0;
-	 uint8_t res = 0;
-	 res = getVIN(&v);
-	 if(res == 0)
-	 {
-		sprintf(data,"VIN ADC: %d", v);
-		PRINTF("%s\r\n", data);
-		sprintf(data,"VIN I: %f", ((float)v)*0.001611328125);
-		PRINTF("%s\r\n", data);
-	 }
-
-	 uint16_t s = 0;
-	 HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
-	 HAL_Delay(500);
-
-	 res = getVSTEPUP(&v);
-	 if(res == 0)
-	 {
-		sprintf(data,"VSTEPUP ADC: %d", v);
-		PRINTF("%s\r\n", data);
-		sprintf(data,"VSTEPUP I: %f", ((float)v)*0.0072509765625);
-		PRINTF("%s\r\n", data);
-	 }
-
-
-	 HAL_GPIO_WritePin(EN_PWR_OUT_GPIO_Port, EN_PWR_OUT_Pin, GPIO_PIN_RESET);
-	 HAL_Delay(100);
-
-	 //---S1---//
-
-	 res = get420_1(&s);
-	 HAL_Delay(100);
-	 if(res == 0)
-	 {
-		sprintf(data,"S1a ADC: %d", s);
-		PRINTF("%s\r\n", data);
-		sprintf(data,"S1a I: %f", (float)((double)s)*0.000008824359940);
-		PRINTF("%s\r\n", data);
-	 }
-	 HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_RESET);
-	 HAL_Delay(1000);
-	 res = get420_1(&s);
-	 HAL_Delay(100);
-	 if(res == 0)
-	 {
-		sprintf(data,"S1b ADC: %d", s);
-		PRINTF("%s\r\n", data);
-		sprintf(data,"S1b I: %f", (float)((double)s)*0.000008824359940);
-		PRINTF("%s\r\n", data);
-	 }
-	 HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_SET);
-	 HAL_Delay(100);
-
-	 //---S2---//
-
-	 res = get420_2(&s);
-	 HAL_Delay(100);
-	 if(res == 0)
-	 {
-		sprintf(data,"S2a ADC: %d", s);
-		PRINTF("%s\r\n", data);
-		sprintf(data,"S2a I: %f", (float)((double)s)*0.000008824359940);
-		PRINTF("%s\r\n", data);
-	 }
-	 HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_RESET);
-	 HAL_Delay(1000);
-	 res = get420_2(&s);
-	 HAL_Delay(100);
-	 if(res == 0)
-	 {
-		sprintf(data,"S2b ADC: %d", s);
-		PRINTF("%s\r\n", data);
-		sprintf(data,"S2b I: %f", (float)((double)s)*0.000008824359940);
-		PRINTF("%s\r\n", data);
-	 }
-	 HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_SET);
-	 HAL_Delay(100);
-
-	 HAL_GPIO_WritePin(EN_PWR_OUT_GPIO_Port, EN_PWR_OUT_Pin, GPIO_PIN_SET);
-	 HAL_Delay(100);
-	 HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
-
-//	uint16_t sT, sH;
-//	float temperatureC, humidityH;           //variable for temperature[°C] as float
-//	uint8_t  error = 0;              //variable for error code. For codes see system.h
-//	error |= SHT2x_MeasureHM(TEMP, &sT);
-//	temperatureC = SHT2x_CalcTemperatureC(sT);
-//	sprintf((char*)data, "T: %6.2f\r\n", temperatureC );
-//	PRINTF("%s\n", data);
-//	error |= SHT2x_MeasureHM(HUMIDITY, &sH);
-//	humidityH = SHT2x_CalcRH(sH);
-//	sprintf((char*)data, "H: %6.2f\r\n", humidityH );
-//	PRINTF("%s\n", data);
+//	uint16_t v = 0;
+//	uint8_t res = 0;
+//	res = getVIN(&v);
+//	if(res == 0)
+//	{
+//		sprintf(data,"VIN ADC: %d", v);
+//		PRINTF("%s\r\n", data);
+//		sprintf(data,"VIN I: %f", ((float)v)*0.001611328125);
+//		PRINTF("%s\r\n", data);
+//	}
+//
+//	uint16_t s = 0;
+//	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
+//	HAL_Delay(500);
+//
+//	res = getVSTEPUP(&v);
+//	if(res == 0)
+//	{
+//		sprintf(data,"VSTEPUP ADC: %d", v);
+//		PRINTF("%s\r\n", data);
+//		sprintf(data,"VSTEPUP I: %f", ((float)v)*0.0072509765625);
+//		PRINTF("%s\r\n", data);
+//	}
+//
+//
+//	HAL_GPIO_WritePin(EN_PWR_OUT_GPIO_Port, EN_PWR_OUT_Pin, GPIO_PIN_RESET);
+//	HAL_Delay(100);
+//
+//	//---S1---//
+//
+//	res = get420_1(&s);
+//	HAL_Delay(100);
+//	if(res == 0)
+//	{
+//		sprintf(data,"S1a ADC: %d", s);
+//		PRINTF("%s\r\n", data);
+//		sprintf(data,"S1a I: %f", (float)((double)s)*0.000008824359940);
+//		PRINTF("%s\r\n", data);
+//	}
+//	HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_RESET);
+//	HAL_Delay(1000);
+//	res = get420_1(&s);
+//	HAL_Delay(100);
+//	if(res == 0)
+//	{
+//		sprintf(data,"S1b ADC: %d", s);
+//		PRINTF("%s\r\n", data);
+//		sprintf(data,"S1b I: %f", (float)((double)s)*0.000008824359940);
+//		PRINTF("%s\r\n", data);
+//	}
+//	HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_SET);
+//	HAL_Delay(100);
+//
+//	//---S2---//
+//
+//	res = get420_2(&s);
+//	HAL_Delay(100);
+//	if(res == 0)
+//	{
+//		sprintf(data,"S2a ADC: %d", s);
+//		PRINTF("%s\r\n", data);
+//		sprintf(data,"S2a I: %f", (float)((double)s)*0.000008824359940);
+//		PRINTF("%s\r\n", data);
+//	}
+//	HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_RESET);
+//	HAL_Delay(1000);
+//	res = get420_2(&s);
+//	HAL_Delay(100);
+//	if(res == 0)
+//	{
+//		sprintf(data,"S2b ADC: %d", s);
+//		PRINTF("%s\r\n", data);
+//		sprintf(data,"S2b I: %f", (float)((double)s)*0.000008824359940);
+//		PRINTF("%s\r\n", data);
+//	}
+//	HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_SET);
+//	HAL_Delay(100);
+//
+//	HAL_GPIO_WritePin(EN_PWR_OUT_GPIO_Port, EN_PWR_OUT_Pin, GPIO_PIN_SET);
+//	HAL_Delay(100);
+//	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
 
 	uint8_t id = 0;
 	HTS221SensorReadID(&id);
