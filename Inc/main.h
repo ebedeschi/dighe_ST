@@ -90,6 +90,8 @@ void Error_Handler(void);
 #define OPAMP1_ANALOG1_GPIO_Port GPIOA
 #define ADC_STEPUP_Pin GPIO_PIN_1
 #define ADC_STEPUP_GPIO_Port GPIOA
+#define BERK_INT_Pin GPIO_PIN_2
+#define BERK_INT_GPIO_Port GPIOA
 #define OPAMP2_ANALOG2_Pin GPIO_PIN_6
 #define OPAMP2_ANALOG2_GPIO_Port GPIOA
 #define LED2_Pin GPIO_PIN_7
@@ -102,6 +104,14 @@ void Error_Handler(void);
 #define EXT_INT_GPIO_Port GPIOB
 #define EXT_GPIO_Output_Pin GPIO_PIN_2
 #define EXT_GPIO_Output_GPIO_Port GPIOB
+#define BERK_CS_Pin GPIO_PIN_12
+#define BERK_CS_GPIO_Port GPIOB
+#define SCK_BERK_Pin GPIO_PIN_13
+#define SCK_BERK_GPIO_Port GPIOB
+#define BERK_MISO_Pin GPIO_PIN_14
+#define BERK_MISO_GPIO_Port GPIOB
+#define BERK_MOSI_Pin GPIO_PIN_15
+#define BERK_MOSI_GPIO_Port GPIOB
 #define RADIO_DIO0_Pin GPIO_PIN_6
 #define RADIO_DIO0_GPIO_Port GPIOC
 #define RADIO_DIO1_Pin GPIO_PIN_7

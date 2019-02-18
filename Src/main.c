@@ -55,7 +55,10 @@
 #include "vcom.h"
 #include "version.h"
 #include "ism330dlc/ism330dlc_reg.h"
+#include "ism330dlc/ism330dlc_app.h"
 #include "HTS221/HTS221Sensor.h"
+#include "BERKELEY/BERKELEY.h"
+#include "BERKELEY/berkeley_app.h"
 #include "analog/analog.h"
 #include <stdio.h>
 #include <stdarg.h>
@@ -77,7 +80,7 @@
 /*!
  * Defines the application data transmission duty cycle. 5s, value in [ms].
  */
-#define APP_TX_DUTYCYCLE                            30000
+#define DEFAULT_TX_DUTYCYCLE                            30000
 /*!
  * LoRaWAN Adaptive Data Rate
  * @note Please note that when ADR is enabled the end-device should be static
@@ -184,6 +187,7 @@ static float temperature_degC;
 static uint8_t whoamI, rst;
 uint8_t flag;
 int16_t _tout, _tout0, _tout1;
+uint32_t app_tx_dutycyle = DEFAULT_TX_DUTYCYCLE;
 
 char data[50];
 /* USER CODE END PV */
@@ -210,26 +214,7 @@ void vcom_Send( char *format, ... )
 
   va_end(args);
 }
-static int32_t platform_write(void *handle, uint8_t Reg, uint8_t *Bufp,
-                              uint16_t len)
-{
-  if (handle == &hi2c2)
-  {
-    HAL_I2C_Mem_Write(handle, ISM330DLC_I2C_ADD_L, Reg,
-                      I2C_MEMADD_SIZE_8BIT, Bufp, len, 1000);
-  }
-  return 0;
-}
-static int32_t platform_read(void *handle, uint8_t Reg, uint8_t *Bufp,
-                             uint16_t len)
-{
-  if (handle == &hi2c2)
-  {
-      HAL_I2C_Mem_Read(handle, ISM330DLC_I2C_ADD_L, Reg,
-                       I2C_MEMADD_SIZE_8BIT, Bufp, len, 1000);
-  }
-  return 0;
-}
+
 /* USER CODE END 0 */
 
 /**
@@ -239,10 +224,6 @@ static int32_t platform_read(void *handle, uint8_t Reg, uint8_t *Bufp,
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
-//	uint64_t a=0,b=0;
-//	while(a++<10000000)
-//	  while(b++<1000000);
 
   /* USER CODE END 1 */
 
@@ -272,27 +253,13 @@ int main(void)
   MX_ADC1_Init();
   MX_OPAMP2_Init();
   MX_ADC2_Init();
+//  MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
-
-//  HAL_OPAMP_Start(&hopamp1);
-//
-//  /*##-3- Calibrate ADC then Start the conversion process ####################*/
-//  if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED) !=  HAL_OK)
-//  {
-//    /* ADC Calibration Error */
-//    Error_Handler();
-//  }
-//
-//  if (HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED) !=  HAL_OK)
-//  {
-//    /* ADC Calibration Error */
-//    Error_Handler();
-//  }
 
   PRINTF("START\n");
 
-  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+//  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+//  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 
   HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
 //  HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
@@ -318,74 +285,37 @@ int main(void)
 //  HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_RESET);
 //  HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_SET);
 
+//  BERKELEY_Init(208,500);
 
   HTS221Sensor(&hi2c2, HTS221_I2C_ADDRESS);
   HTS221SensorEnable();
 
-  ism330dlc_ctx_t dev_ctx;
-  dev_ctx.write_reg = platform_write;
-  dev_ctx.read_reg = platform_read;
-  dev_ctx.handle = &hi2c2;
-  /*
-   *  Check device ID
-   */
-  whoamI = 0;
-  ism330dlc_device_id_get(&dev_ctx, &whoamI);
-  /*
-   *  Restore default configuration
-   */
-  ism330dlc_reset_set(&dev_ctx, PROPERTY_ENABLE);
-  do {
-    ism330dlc_reset_get(&dev_ctx, &rst);
-  } while (rst);
-  /*
-   *  Enable Block Data Update
-   */
-  ism330dlc_block_data_update_set(&dev_ctx, PROPERTY_ENABLE);
-  /*
-   * Set Output Data Rate
-   */
-  ism330dlc_xl_data_rate_set(&dev_ctx, ISM330DLC_XL_ODR_12Hz5);
-  ism330dlc_gy_data_rate_set(&dev_ctx, ISM330DLC_GY_ODR_12Hz5);
-  /*
-   * Set full scale
-   */
-  ism330dlc_xl_full_scale_set(&dev_ctx, ISM330DLC_2g);
-  ism330dlc_gy_full_scale_set(&dev_ctx, ISM330DLC_2000dps);
-
-  /*
-   * Configure filtering chain(No aux interface)
-   */
-  /* Accelerometer - analog filter */
-  ism330dlc_xl_filter_analog_set(&dev_ctx, ISM330DLC_XL_ANA_BW_400Hz);
-
-  /* Accelerometer - LPF1 path ( LPF2 not used )*/
-  //ism330dlc_xl_lp1_bandwidth_set(&dev_ctx, ISM330DLC_XL_LP1_ODR_DIV_4);
-
-  /* Accelerometer - LPF1 + LPF2 path */
-  ism330dlc_xl_lp2_bandwidth_set(&dev_ctx, ISM330DLC_XL_LOW_NOISE_LP_ODR_DIV_100);
-
-  /* Accelerometer - High Pass / Slope path */
-  //ism330dlc_xl_reference_mode_set(&dev_ctx, PROPERTY_DISABLE);
-  //ism330dlc_xl_hp_bandwidth_set(&dev_ctx, ISM330DLC_XL_HP_ODR_DIV_100);
-
-  /* Gyroscope - filtering chain */
-  ism330dlc_gy_band_pass_set(&dev_ctx, ISM330DLC_HP_260mHz_LP1_STRONG);
+  uint8_t err = 0;
+  err = ISM330DLC_Init(ISM330DLC_XL_ODR_12Hz5, ISM330DLC_2g, ISM330DLC_XL_ANA_BW_400Hz, ISM330DLC_XL_LOW_NOISE_LP_ODR_DIV_100);
+  if(err!=0)
+  {
+	  sprintf(data,"Error: ISM330DLC_Init");
+	  PRINTF("%s\r\n", data);
+  }
 
   /* Configure the hardware*/
   HW_Init();
 
+  HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+  HAL_Delay(5000);
+  HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+
   /*Disbale Stand-by mode*/
-//  LPM_SetOffMode(LPM_APPLI_Id , LPM_Disable );
-//
-//  PRINTF("VERSION: %X\n\r", VERSION);
-//
-//  /* Configure the Lora Stack*/
-//  LORA_Init( &LoRaMainCallbacks, &LoRaParamInit);
-//
-//  LORA_Join();
-//
-//  LoraStartTx( TX_ON_TIMER) ;
+  LPM_SetOffMode(LPM_APPLI_Id , LPM_Disable );
+
+  PRINTF("VERSION: %X\n\r", VERSION);
+
+  /* Configure the Lora Stack*/
+  LORA_Init( &LoRaMainCallbacks, &LoRaParamInit);
+
+  LORA_Join();
+
+  LoraStartTx( TX_ON_TIMER) ;
 
   /* USER CODE END 2 */
 
@@ -393,23 +323,24 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-	  HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+//	  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+//	  HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
 
-//	LoRaMacProcess( );
-//	DISABLE_IRQ( );
-//	/* if an interrupt has occurred after DISABLE_IRQ, it is kept pending
-//	 * and cortex will not enter low power anyway  */
-//
-//	#ifndef LOW_POWER_DISABLE
-//		LPM_EnterLowPower( );
-//	#endif
-//
-//	ENABLE_IRQ();
+	LoRaMacProcess( );
+	DISABLE_IRQ( );
+	/* if an interrupt has occurred after DISABLE_IRQ, it is kept pending
+	 * and cortex will not enter low power anyway  */
 
+	#ifndef LOW_POWER_DISABLE
+		LPM_EnterLowPower( );
+	#endif
+
+	ENABLE_IRQ();
+
+// -------------------- S1 S2 ------------------------
 //	uint16_t v = 0;
 //	uint8_t res = 0;
 //	res = getVIN(&v);
@@ -421,6 +352,41 @@ int main(void)
 //		PRINTF("%s\r\n", data);
 //	}
 //
+//	uint16_t s1 = 0;
+//	uint16_t s2 = 0;
+//	uint8_t res1 = 0, res2 = 0;
+//	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
+//	HAL_Delay(1000);
+//	//---VSTEPUP---//
+//	res = getVSTEPUP(&v);
+//	if(res == 0)
+//	{
+//		sprintf(data,"VSTEPUP ADC: %d", v);
+//		PRINTF("%s\r\n", data);
+//		sprintf(data,"VSTEPUP I: %f", ((float)v)*0.0072509765625);
+//		PRINTF("%s\r\n", data);
+//	}
+//	//---S1---//
+//	res1 = get420_1(&s1);
+//	//---S2---//
+//	res2 = get420_2(&s2);
+//	if(res1 == 0)
+//	{
+//		sprintf(data,"S1 ADC: %d", s1);
+//		PRINTF("%s\r\n", data);
+//		sprintf(data,"S1 I: %f", (float)((float)s1)*0.000008824359940);
+//		PRINTF("%s\r\n", data);
+//	}
+//	if(res2 == 0)
+//	{
+//		sprintf(data,"S2 ADC: %d", s2);
+//		PRINTF("%s\r\n", data);
+//		sprintf(data,"S2 I: %f", (float)((float)s2)*0.000008824359940);
+//		PRINTF("%s\r\n", data);
+//	}
+//	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
+
+// -------------------- CON RELE'------------------------
 //	uint16_t s = 0;
 //	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
 //	HAL_Delay(500);
@@ -492,63 +458,76 @@ int main(void)
 //	HAL_Delay(100);
 //	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
 
-	uint8_t id = 0;
-	HTS221SensorReadID(&id);
-	sprintf((char*)data, "id: %d", id );
-	PRINTF("%s\r\n", data);
-	float temp = 0;
-	HTS221SensorGetTemperature(&temp);
-	sprintf((char*)data, "Temp: %6.2f", temp );
-	PRINTF("%s\r\n", data);
-	float hum = 0;
-	HTS221SensorGetHumidity(&hum);
-	sprintf((char*)data, "Hum: %6.2f", hum );
-	PRINTF("%s\r\n", data);
 
-	/*
-	 * Read output only if new value is available
-	 */
-	ism330dlc_reg_t reg;
-	ism330dlc_status_reg_get(&dev_ctx, &reg.status_reg);
+//	uint8_t ReadValue = 0;
+//	BERKELEY_ReadReg(BERKELEY_REG_ADDR_WHO_AM_I, &ReadValue, 0x01);
+//	sprintf((char*)data, "BERK id: %d", ReadValue );
+//	PRINTF("%s\r\n", data);
+//	int16_t ptrRawData[2];
+//	BERKELEY_AccBitDataRead(ptrRawData);
+//	sprintf((char*)data, "ptrRawData[0]: %d\r\nptrRawData[1]: %d\r\n", ptrRawData[0], ptrRawData[1] );
+//	PRINTF("%s", data);
+//	float ber_x=0, ber_y=0;
+//	BERKELEY_GetAcceleration(&ber_x, &ber_y, 500);
+//	sprintf((char*)data, "x: %6.2f\r\ny: %6.2f\r\n", ber_x, ber_y );
+//	PRINTF("%s", data);
 
-	if (reg.status_reg.xlda)
-	{
-	  /* Read magnetic field data */
-	  memset(data_raw_acceleration.u8bit, 0x00, 3*sizeof(int16_t));
-	  ism330dlc_acceleration_raw_get(&dev_ctx, data_raw_acceleration.u8bit);
-	  acceleration_mg[0] = ISM330DLC_FROM_FS_2g_TO_mg( data_raw_acceleration.i16bit[0]);
-	  acceleration_mg[1] = ISM330DLC_FROM_FS_2g_TO_mg( data_raw_acceleration.i16bit[1]);
-	  acceleration_mg[2] = ISM330DLC_FROM_FS_2g_TO_mg( data_raw_acceleration.i16bit[2]);
 
-	  sprintf((char*)data, "Acceleration [mg]:%4.2f\t%4.2f\t%4.2f",
-			  acceleration_mg[0], acceleration_mg[1], acceleration_mg[2]);
-	  PRINTF("%s\r\n", data);
-	}
-	if (reg.status_reg.gda)
-	{
-	  /* Read magnetic field data */
-	  memset(data_raw_angular_rate.u8bit, 0x00, 3*sizeof(int16_t));
-	  ism330dlc_angular_rate_raw_get(&dev_ctx, data_raw_angular_rate.u8bit);
-	  angular_rate_mdps[0] = ISM330DLC_FROM_FS_2000dps_TO_mdps(data_raw_angular_rate.i16bit[0]);
-	  angular_rate_mdps[1] = ISM330DLC_FROM_FS_2000dps_TO_mdps(data_raw_angular_rate.i16bit[1]);
-	  angular_rate_mdps[2] = ISM330DLC_FROM_FS_2000dps_TO_mdps(data_raw_angular_rate.i16bit[2]);
-
-	  sprintf((char*)data, "Angular rate [mdps]:%4.2f\t%4.2f\t%4.2f",
-			  angular_rate_mdps[0], angular_rate_mdps[1], angular_rate_mdps[2]);
-	  PRINTF("%s\r\n", data);
-	}
-	if (reg.status_reg.tda)
-	{
-	  /* Read temperature data */
-	  memset(data_raw_temperature.u8bit, 0x00, sizeof(int16_t));
-	  ism330dlc_temperature_raw_get(&dev_ctx, data_raw_temperature.u8bit);
-	  temperature_degC = ISM330DLC_FROM_LSB_TO_degC( data_raw_temperature.i16bit );
-
-	  sprintf((char*)data, "Temperature [degC]:%6.2f", temperature_degC );
-	  PRINTF("%s\r\n", data);
-	}
-
-	  HAL_Delay(20000);
+//	uint8_t id = 0;
+//	HTS221SensorReadID(&id);
+//	sprintf((char*)data, "id: %d", id );
+//	PRINTF("%s\r\n", data);
+//	float temp = 0;
+//	HTS221SensorGetTemperature(&temp);
+//	sprintf((char*)data, "Temp: %6.2f", temp );
+//	PRINTF("%s\r\n", data);
+//	float hum = 0;
+//	HTS221SensorGetHumidity(&hum);
+//	sprintf((char*)data, "Hum: %6.2f", hum );
+//	PRINTF("%s\r\n", data);
+//
+//
+//	float x=0.0, y=0.0, z=0.0;
+//	float arx=0.0, ary=0.0, arz=0.0;
+//	float t=0.0;
+//
+//	err = ISM330DLC_ReadAcceleration(&x, &y, &z);
+//	if(err!=0)
+//	{
+//	  sprintf(data,"Error: ISM330DLC_ReadAcceleration");
+//	  PRINTF("%s\r\n", data);
+//	}
+//	else
+//	{
+//	  sprintf((char*)data, "Acceleration [mg]:%4.2f\t%4.2f\t%4.2f", x, y, z);
+//	  PRINTF("%s\r\n", data);
+//	}
+//
+//	err = ISM330DLC_ReadAngularRate(&arx, &ary, &arz);
+//	if(err!=0)
+//	{
+//	  sprintf(data,"Error: ISM330DLC_ReadAngularRate");
+//	  PRINTF("%s\r\n", data);
+//	}
+//	else
+//	{
+//	  sprintf((char*)data, "Angular rate [mdps]:%4.2f\t%4.2f\t%4.2f", arx, ary, arz);
+//	  PRINTF("%s\r\n", data);
+//	}
+//
+//	err = ISM330DLC_ReadTemperature(&t);
+//	if(err!=0)
+//	{
+//	  sprintf(data,"Error: ISM330DLC_ReadTemperature");
+//	  PRINTF("%s\r\n", data);
+//	}
+//	else
+//	{
+//	  sprintf((char*)data, "Temperature [degC]:%6.2f", t);
+//	  PRINTF("%s\r\n", data);
+//	}
+//
+//	  HAL_Delay(20000);
   }
   /* USER CODE END 3 */
 }
@@ -641,11 +620,18 @@ static void LORA_HasJoined( void )
 static void Send( void )
 {
   /* USER CODE BEGIN 3 */
-  uint16_t pressure = 0;
-  int16_t temperature = 0;
-  uint16_t humidity = 0;
-  uint8_t batteryLevel;
-  sensor_t sensor_data;
+
+	PRINTF("preSEND\r\n", data);
+
+	uint16_t _vin = 0.0;
+	uint16_t _vstepup = 0.0;
+	uint16_t _s1 = 0.0;
+	uint16_t _s2 = 0.0;
+	uint16_t _temp = 0.0;
+	uint16_t _hum = 0.0;
+	float _x=0.0, _y=0.0, _z=0.0;
+	float arx=0.0, ary=0.0, arz=0.0;
+	float tmp=0.0;
 
   if ( LORA_JoinStatus () != LORA_SET)
   {
@@ -654,104 +640,161 @@ static void Send( void )
     return;
   }
 
-  TVL1(PRINTF("SEND REQUEST\n\r");)
-#ifndef CAYENNE_LPP
-  int32_t latitude, longitude = 0;
-  uint16_t altitudeGps = 0;
-#endif
+  app_tx_dutycyle = 600000;
 
-#ifdef USE_B_L072Z_LRWAN1
-  TimerInit( &TxLedTimer, OnTimerLedEvent );
+	PRINTF("preSEND\r\n", data);
 
-  TimerSetValue(  &TxLedTimer, 200);
+	uint32_t i = 0;
+	AppData.Port = LORAWAN_APP_PORT;
 
-  LED_On( LED_RED1 ) ;
+    uint8_t _type = 0x01;
 
-  TimerStart( &TxLedTimer );
-#endif
+	uint16_t v = 0;
+	uint8_t res = 0;
+	res = getVIN(&v);
+	if(res == 0)
+	{
+	sprintf(data,"VIN ADC: %d", v);
+	PRINTF("%s\r\n", data);
+	_vin = v;
+	sprintf(data,"VIN I: %f", ((float)v)*0.001611328125);
+	PRINTF("%s\r\n", data);
+	}
 
-//  BSP_sensor_Read( &sensor_data );
 
-#ifdef CAYENNE_LPP
-  uint8_t cchannel=0;
-  temperature = ( int16_t )( sensor_data.temperature * 10 );     /* in °C * 10 */
-  pressure    = ( uint16_t )( sensor_data.pressure * 100 / 10 );  /* in hPa / 10 */
-  humidity    = ( uint16_t )( sensor_data.humidity * 2 );        /* in %*2     */
-  uint32_t i = 0;
+//	uint8_t ReadValue = 0;
+//	BERKELEY_ReadReg(BERKELEY_REG_ADDR_WHO_AM_I, &ReadValue, 0x01);
+//	sprintf((char*)data, "BERK id: %d", ReadValue );
+//	PRINTF("%s\r\n", data);
+//	int16_t ptrRawData[2];
+//	BERKELEY_AccBitDataRead(ptrRawData);
+//	sprintf((char*)data, "ptrRawData[0]: %d\r\nptrRawData[1]: %d\r\n", ptrRawData[0], ptrRawData[1] );
+//	PRINTF("%s", data);
+//	float ber_x=0, ber_y=0;
+//	BERKELEY_GetAcceleration(&ber_x, &ber_y, 500);
+//	sprintf((char*)data, "x: %6.2f\r\ny: %6.2f\r\n", ber_x, ber_y );
+//	PRINTF("%s", data);
 
-  batteryLevel = HW_GetBatteryLevel( );                     /* 1 (very low) to 254 (fully charged) */
 
-  AppData.Port = LPP_APP_PORT;
+	float t = 0.0;
+	float h = 0.0;
+	uint8_t id = 0;
+	HTS221SensorReadID(&id);
+	sprintf((char*)data, "id: %d", id );
+	PRINTF("%s\r\n", data);
+	HTS221SensorGetTemperature(&t);
+	_temp = (uint16_t) (( t + 80 ) * 100);
+	sprintf((char*)data, "Temp: %6.2f", t );
+	PRINTF("%s\r\n", data);
+	HTS221SensorGetHumidity(&h);
+	_hum = (uint16_t) (h * 100);
+	sprintf((char*)data, "Hum: %6.2f", h );
+	PRINTF("%s\r\n", data);
 
-  AppData.Buff[i++] = cchannel++;
-  AppData.Buff[i++] = LPP_DATATYPE_BAROMETER;
-  AppData.Buff[i++] = ( pressure >> 8 ) & 0xFF;
-  AppData.Buff[i++] = pressure & 0xFF;
-  AppData.Buff[i++] = cchannel++;
-  AppData.Buff[i++] = LPP_DATATYPE_TEMPERATURE;
-  AppData.Buff[i++] = ( temperature >> 8 ) & 0xFF;
-  AppData.Buff[i++] = temperature & 0xFF;
-  AppData.Buff[i++] = cchannel++;
-  AppData.Buff[i++] = LPP_DATATYPE_HUMIDITY;
-  AppData.Buff[i++] = humidity & 0xFF;
-#if defined( REGION_US915 ) || defined( REGION_US915_HYBRID ) || defined ( REGION_AU915 )
-  /* The maximum payload size does not allow to send more data for lowest DRs */
-#else
-  AppData.Buff[i++] = cchannel++;
-  AppData.Buff[i++] = LPP_DATATYPE_DIGITAL_INPUT;
-  AppData.Buff[i++] = batteryLevel*100/254;
-  AppData.Buff[i++] = cchannel++;
-  AppData.Buff[i++] = LPP_DATATYPE_DIGITAL_OUTPUT;
-  AppData.Buff[i++] = AppLedStateOn;
-#endif  /* REGION_XX915 */
-#else  /* not CAYENNE_LPP */
 
-//  temperature = ( int16_t )( sensor_data.temperature * 100 );     /* in °C * 100 */
-//  pressure    = ( uint16_t )( sensor_data.pressure * 100 / 10 );  /* in hPa / 10 */
-//  humidity    = ( uint16_t )( sensor_data.humidity * 10 );        /* in %*10     */
-//  latitude = sensor_data.latitude;
-//  longitude= sensor_data.longitude;
-  uint32_t i = 0;
+	uint8_t err = 0;
+	err = ISM330DLC_ReadAcceleration(&_x, &_y, &_z);
+	if(err!=0)
+	{
+	  sprintf(data,"Error: ISM330DLC_ReadAcceleration");
+	  PRINTF("%s\r\n", data);
+	}
+	else
+	{
+	  sprintf((char*)data, "Acceleration [mg]:%4.2f\t%4.2f\t%4.2f", _x, _y, _z);
+	  PRINTF("%s\r\n", data);
+	}
 
-//  batteryLevel = HW_GetBatteryLevel( );                     /* 1 (very low) to 254 (fully charged) */
+	err = ISM330DLC_ReadAngularRate(&arx, &ary, &arz);
+	if(err!=0)
+	{
+	  sprintf(data,"Error: ISM330DLC_ReadAngularRate");
+	  PRINTF("%s\r\n", data);
+	}
+	else
+	{
+	  sprintf((char*)data, "Angular rate [mdps]:%4.2f\t%4.2f\t%4.2f", arx, ary, arz);
+	  PRINTF("%s\r\n", data);
+	}
 
-  AppData.Port = LORAWAN_APP_PORT;
+	err = ISM330DLC_ReadTemperature(&tmp);
+	if(err!=0)
+	{
+	  sprintf(data,"Error: ISM330DLC_ReadTemperature");
+	  PRINTF("%s\r\n", data);
+	}
+	else
+	{
+	  sprintf((char*)data, "Temperature [degC]:%6.2f", tmp);
+	  PRINTF("%s\r\n", data);
+	}
 
-#if defined( REGION_US915 ) || defined( REGION_US915_HYBRID ) || defined ( REGION_AU915 )
-  AppData.Buff[i++] = AppLedStateOn;
-  AppData.Buff[i++] = ( pressure >> 8 ) & 0xFF;
-  AppData.Buff[i++] = pressure & 0xFF;
-  AppData.Buff[i++] = ( temperature >> 8 ) & 0xFF;
-  AppData.Buff[i++] = temperature & 0xFF;
-  AppData.Buff[i++] = ( humidity >> 8 ) & 0xFF;
-  AppData.Buff[i++] = humidity & 0xFF;
-  AppData.Buff[i++] = batteryLevel;
-  AppData.Buff[i++] = 0;
-  AppData.Buff[i++] = 0;
-  AppData.Buff[i++] = 0;
-#else  /* not REGION_XX915 */
-  AppData.Buff[i++] = 'c';
-  AppData.Buff[i++] = 'i';
-  AppData.Buff[i++] = 'a';
-  AppData.Buff[i++] = 'o';
-//  AppData.Buff[i++] = AppLedStateOn;
-//  AppData.Buff[i++] = ( pressure >> 8 ) & 0xFF;
-//  AppData.Buff[i++] = pressure & 0xFF;
-//  AppData.Buff[i++] = ( temperature >> 8 ) & 0xFF;
-//  AppData.Buff[i++] = temperature & 0xFF;
-//  AppData.Buff[i++] = ( humidity >> 8 ) & 0xFF;
-//  AppData.Buff[i++] = humidity & 0xFF;
-//  AppData.Buff[i++] = batteryLevel;
-//  AppData.Buff[i++] = ( latitude >> 16 ) & 0xFF;
-//  AppData.Buff[i++] = ( latitude >> 8 ) & 0xFF;
-//  AppData.Buff[i++] = latitude & 0xFF;
-//  AppData.Buff[i++] = ( longitude >> 16 ) & 0xFF;
-//  AppData.Buff[i++] = ( longitude >> 8 ) & 0xFF;
-//  AppData.Buff[i++] = longitude & 0xFF;
-//  AppData.Buff[i++] = ( altitudeGps >> 8 ) & 0xFF;
-//  AppData.Buff[i++] = altitudeGps & 0xFF;
-#endif  /* REGION_XX915 */
-#endif  /* CAYENNE_LPP */
+	uint16_t s1 = 0;
+	uint16_t s2 = 0;
+	uint8_t res1 = 0, res2 = 0;
+	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
+	HAL_Delay(1000);
+	//---VSTEPUP---//
+	v = 0;
+	res = getVSTEPUP(&v);
+	if(res == 0)
+	{
+		sprintf(data,"VSTEPUP ADC: %d", v);
+		PRINTF("%s\r\n", data);
+		_vstepup = v;
+		sprintf(data,"VSTEPUP I: %f", ((float)v)*0.0072509765625);
+		PRINTF("%s\r\n", data);
+	}
+	//---S1---//
+	res1 = get420_1(&s1);
+	//---S2---//
+	res2 = get420_2(&s2);
+	if(res1 == 0)
+	{
+		sprintf(data,"S1 ADC: %d", s1);
+		PRINTF("%s\r\n", data);
+		_s1 = s1;
+		sprintf(data,"S1 I: %f", ((float)s1)*0.000008824359940);
+		PRINTF("%s\r\n", data);
+	}
+	if(res2 == 0)
+	{
+		sprintf(data,"S2 ADC: %d", s2);
+		PRINTF("%s\r\n", data);
+		_s2 = s2;
+		sprintf(data,"S2 I: %f", ((float)s2)*0.000008824359940);
+		PRINTF("%s\r\n", data);
+	}
+	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
+
+
+  memcpy(&AppData.Buff[i], &_type, sizeof(_type));
+  i+=sizeof(_type);
+  memcpy(&AppData.Buff[i], &_vin, sizeof(_vin));
+  i+=sizeof(_vin);
+  memcpy(&AppData.Buff[i], &_temp, sizeof(_temp));
+  i+=sizeof(_temp);
+  memcpy(&AppData.Buff[i], &_hum, sizeof(_hum));
+  i+=sizeof(_hum);
+  memcpy(&AppData.Buff[i], &_x, sizeof(_x));
+  i+=sizeof(_x);
+  memcpy(&AppData.Buff[i], &_y, sizeof(_y));
+  i+=sizeof(_y);
+  memcpy(&AppData.Buff[i], &_z, sizeof(_z));
+  i+=sizeof(_z);
+  memcpy(&AppData.Buff[i], &_vstepup, sizeof(_vstepup));
+  i+=sizeof(_vstepup);
+  memcpy(&AppData.Buff[i], &_s1, sizeof(_s1));
+  i+=sizeof(_s1);
+  memcpy(&AppData.Buff[i], &_s2, sizeof(_s2));
+  i+=sizeof(_s2);
+
+
+//  AppData.Buff[i++] = 'c';
+//  AppData.Buff[i++] = 'i';
+//  AppData.Buff[i++] = 'a';
+//  AppData.Buff[i++] = 'o';
+
   AppData.BuffSize = i;
 
   LORA_send( &AppData, LORAWAN_DEFAULT_CONFIRM_MSG_STATE);
@@ -817,6 +860,9 @@ static void LORA_RxData( lora_AppData_t *AppData )
 static void OnTxTimerEvent( void )
 {
   /*Wait for next tx slot*/
+	TimerStop(&TxTimer);
+	TimerInit( &TxTimer, OnTxTimerEvent );
+	TimerSetValue( &TxTimer,  app_tx_dutycyle);
   TimerStart( &TxTimer);
   /*Send*/
   Send( );
@@ -827,8 +873,8 @@ static void LoraStartTx(TxEventType_t EventType)
   if (EventType == TX_ON_TIMER)
   {
     /* send everytime timer elapses */
-    TimerInit( &TxTimer, OnTxTimerEvent );
-    TimerSetValue( &TxTimer,  APP_TX_DUTYCYCLE);
+//	TimerInit( &TxTimer, OnTxTimerEvent );
+//	TimerSetValue( &TxTimer,  app_tx_dutycyle);
     OnTxTimerEvent();
   }
   else

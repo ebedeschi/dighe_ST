@@ -506,6 +506,9 @@ void LPM_ExitStopMode( void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   uint32_t pFLatency = 0;
   
+  // prova abilitazione PeriphCLK
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
+
   DISABLE_IRQ( );
 
   /* In case nvic had a pending IT, the arm doesn't enter stop mode
@@ -537,6 +540,17 @@ void LPM_ExitStopMode( void)
     {
       while(1);
     }
+
+    // prova abilitazione PeriphCLK
+    HAL_RCCEx_GetPeriphCLKConfig(&PeriphClkInitStruct);
+
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_USART3
+                                |RCC_PERIPHCLK_I2C2|RCC_PERIPHCLK_ADC;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
   }
   else
   {
