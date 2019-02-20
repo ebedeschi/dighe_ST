@@ -77,6 +77,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+#define RELE
+//#define ACC
+
 /*!
  * Defines the application data transmission duty cycle. 5s, value in [ms].
  */
@@ -287,22 +290,20 @@ int main(void)
 
 //  BERKELEY_Init(208,500);
 
-  HTS221Sensor(&hi2c2, HTS221_I2C_ADDRESS);
-  HTS221SensorEnable();
+	uint8_t err = 0;
 
-  uint8_t err = 0;
-  err = ISM330DLC_Init(ISM330DLC_XL_ODR_12Hz5, ISM330DLC_2g, ISM330DLC_XL_ANA_BW_400Hz, ISM330DLC_XL_LOW_NOISE_LP_ODR_DIV_100);
-  if(err!=0)
-  {
+	err = ISM330DLC_Init(ISM330DLC_XL_ODR_12Hz5, ISM330DLC_2g, ISM330DLC_XL_ANA_BW_400Hz, ISM330DLC_XL_LOW_NOISE_LP_ODR_DIV_100);
+	if(err!=0)
+	{
 	  sprintf(data,"Error: ISM330DLC_Init");
 	  PRINTF("%s\r\n", data);
-  }
+	}
 
   /* Configure the hardware*/
   HW_Init();
 
   HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
-  HAL_Delay(5000);
+  HAL_Delay(10000);
   HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
 
   /*Disbale Stand-by mode*/
@@ -471,12 +472,15 @@ int main(void)
 //	BERKELEY_GetAcceleration(&ber_x, &ber_y, 500);
 //	sprintf((char*)data, "x: %6.2f\r\ny: %6.2f\r\n", ber_x, ber_y );
 //	PRINTF("%s", data);
-
-
+//
+//
+//	HTS221Sensor(&hi2c2, HTS221_I2C_ADDRESS);
+//	HTS221SensorEnable();
 //	uint8_t id = 0;
 //	HTS221SensorReadID(&id);
 //	sprintf((char*)data, "id: %d", id );
 //	PRINTF("%s\r\n", data);
+//	HAL_Delay(100);
 //	float temp = 0;
 //	HTS221SensorGetTemperature(&temp);
 //	sprintf((char*)data, "Temp: %6.2f", temp );
@@ -485,7 +489,7 @@ int main(void)
 //	HTS221SensorGetHumidity(&hum);
 //	sprintf((char*)data, "Hum: %6.2f", hum );
 //	PRINTF("%s\r\n", data);
-//
+//	HTS221SensorDisable();
 //
 //	float x=0.0, y=0.0, z=0.0;
 //	float arx=0.0, ary=0.0, arz=0.0;
@@ -624,15 +628,23 @@ static void Send( void )
 	PRINTF("preSEND\r\n", data);
 
 	uint16_t _vin = 0.0;
-	uint16_t _vstepup = 0.0;
-	uint16_t _s1 = 0.0;
-	uint16_t _s2 = 0.0;
 	uint16_t _temp = 0.0;
 	uint16_t _hum = 0.0;
 	float _x=0.0, _y=0.0, _z=0.0;
 	float arx=0.0, ary=0.0, arz=0.0;
 	float tmp=0.0;
-
+#ifndef ACC
+	uint16_t _vstepup = 0.0;
+#ifndef RELE
+	uint16_t _s1 = 0.0;
+	uint16_t _s2 = 0.0;
+#else
+	uint16_t _s1a = 0.0;
+	uint16_t _s1b = 0.0;
+	uint16_t _s2a = 0.0;
+	uint16_t _s2b = 0.0;
+#endif
+#endif
   if ( LORA_JoinStatus () != LORA_SET)
   {
     /*Not joined, try again later*/
@@ -647,7 +659,17 @@ static void Send( void )
 	uint32_t i = 0;
 	AppData.Port = LORAWAN_APP_PORT;
 
-    uint8_t _type = 0x01;
+    uint8_t _type = 0x00;
+#ifdef ACC
+    _type = 0x03;
+#else
+#ifndef RELE
+    _type = 0x01;
+#else
+    _type = 0x02;
+#endif
+#endif
+
 
 	uint16_t v = 0;
 	uint8_t res = 0;
@@ -679,6 +701,8 @@ static void Send( void )
 	float t = 0.0;
 	float h = 0.0;
 	uint8_t id = 0;
+	HTS221Sensor(&hi2c2, HTS221_I2C_ADDRESS);
+	HTS221SensorEnable();
 	HTS221SensorReadID(&id);
 	sprintf((char*)data, "id: %d", id );
 	PRINTF("%s\r\n", data);
@@ -690,7 +714,7 @@ static void Send( void )
 	_hum = (uint16_t) (h * 100);
 	sprintf((char*)data, "Hum: %6.2f", h );
 	PRINTF("%s\r\n", data);
-
+	HTS221SensorDisable();
 
 	uint8_t err = 0;
 	err = ISM330DLC_ReadAcceleration(&_x, &_y, &_z);
@@ -729,11 +753,15 @@ static void Send( void )
 	  PRINTF("%s\r\n", data);
 	}
 
+#ifndef ACC
+#ifndef RELE
+//	 -------------------- SOLO S1 e S2 ------------------------
 	uint16_t s1 = 0;
 	uint16_t s2 = 0;
 	uint8_t res1 = 0, res2 = 0;
+	// STEPUP POWER ON
 	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
-	HAL_Delay(1000);
+	HAL_Delay(500);
 	//---VSTEPUP---//
 	v = 0;
 	res = getVSTEPUP(&v);
@@ -765,8 +793,83 @@ static void Send( void )
 		sprintf(data,"S2 I: %f", ((float)s2)*0.000008824359940);
 		PRINTF("%s\r\n", data);
 	}
+	// STEPUP POWER OFF
 	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
+#else
+// -------------------- CON RELE'------------------------
+	uint16_t s = 0;
+	// STEPUP POWER ON
+	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
+	HAL_Delay(500);
+	v = 0;
+	res = getVSTEPUP(&v);
+	if(res == 0)
+	{
+		sprintf(data,"VSTEPUP ADC: %d", v);
+		PRINTF("%s\r\n", data);
+		_vstepup = v;
+		sprintf(data,"VSTEPUP I: %f", ((float)v)*0.0072509765625);
+		PRINTF("%s\r\n", data);
+	}
+	// RELE' BOARD POWER ON
+	HAL_GPIO_WritePin(EN_PWR_OUT_GPIO_Port, EN_PWR_OUT_Pin, GPIO_PIN_RESET);
+	HAL_Delay(100);
+	//---S1---//
+	res = get420_1(&s);
+	if(res == 0)
+	{
+		sprintf(data,"S1a ADC: %d", s);
+		PRINTF("%s\r\n", data);
+		_s1a = s;
+		sprintf(data,"S1a I: %f", (float)((float)s)*0.000008824359940);
+		PRINTF("%s\r\n", data);
+	}
+	// SWITCH RELE'
+	HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_RESET);
+	HAL_Delay(300);
+	res = get420_1(&s);
+	if(res == 0)
+	{
+		sprintf(data,"S1b ADC: %d", s);
+		PRINTF("%s\r\n", data);
+		_s1b = s;
+		sprintf(data,"S1b I: %f", (float)((float)s)*0.000008824359940);
+		PRINTF("%s\r\n", data);
+	}
+	// DE-SWITCH RELE'
+	HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_SET);
 
+	//---S2---//
+
+	res = get420_2(&s);
+	if(res == 0)
+	{
+		sprintf(data,"S2a ADC: %d", s);
+		PRINTF("%s\r\n", data);
+		_s2a = s;
+		sprintf(data,"S2a I: %f", (float)((double)s)*0.000008824359940);
+		PRINTF("%s\r\n", data);
+	}
+	// SWITCH RELE'
+	HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_RESET);
+	HAL_Delay(300);
+	res = get420_2(&s);
+	if(res == 0)
+	{
+		sprintf(data,"S2b ADC: %d", s);
+		PRINTF("%s\r\n", data);
+		_s2b = s;
+		sprintf(data,"S2b I: %f", (float)((double)s)*0.000008824359940);
+		PRINTF("%s\r\n", data);
+	}
+	// DE-SWITCH RELE'
+	HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_SET);
+	// RELE' BOARD POWER OFF
+	HAL_GPIO_WritePin(EN_PWR_OUT_GPIO_Port, EN_PWR_OUT_Pin, GPIO_PIN_SET);
+	// STEPUP POWER OFF
+	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
+#endif
+#endif
 
   memcpy(&AppData.Buff[i], &_type, sizeof(_type));
   i+=sizeof(_type);
@@ -782,13 +885,25 @@ static void Send( void )
   i+=sizeof(_y);
   memcpy(&AppData.Buff[i], &_z, sizeof(_z));
   i+=sizeof(_z);
+#ifndef ACC
   memcpy(&AppData.Buff[i], &_vstepup, sizeof(_vstepup));
   i+=sizeof(_vstepup);
+#ifndef RELE
   memcpy(&AppData.Buff[i], &_s1, sizeof(_s1));
   i+=sizeof(_s1);
   memcpy(&AppData.Buff[i], &_s2, sizeof(_s2));
   i+=sizeof(_s2);
-
+#else
+  memcpy(&AppData.Buff[i], &_s1a, sizeof(_s1a));
+  i+=sizeof(_s1a);
+  memcpy(&AppData.Buff[i], &_s1b, sizeof(_s1b));
+  i+=sizeof(_s1b);
+  memcpy(&AppData.Buff[i], &_s2a, sizeof(_s2a));
+  i+=sizeof(_s2a);
+  memcpy(&AppData.Buff[i], &_s2b, sizeof(_s2b));
+  i+=sizeof(_s2b);
+#endif
+#endif
 
 //  AppData.Buff[i++] = 'c';
 //  AppData.Buff[i++] = 'i';

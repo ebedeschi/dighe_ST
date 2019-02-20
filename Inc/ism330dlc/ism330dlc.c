@@ -138,7 +138,7 @@ void ISM330DLC_Start(ism330dlc_odr_xl_t data_rate_acc, ism330dlc_odr_g_t data_ra
 void ISM330DLC_Stop(void)
 {
   /* Device power off */
-  //lps22hb_data_rate_set(&dev_ism330dlc, ISM330DLC_POWER_DOWN);
+//  lps22hb_data_rate_set(&dev_ism330dlc, ISM330DLC_POWER_DOWN);
 }
 /**
   * @}
