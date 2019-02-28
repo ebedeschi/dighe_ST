@@ -77,8 +77,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define RELE
-//#define ACC
+//#define RELE
+#define ACC
+#define BERK
 
 /*!
  * Defines the application data transmission duty cycle. 5s, value in [ms].
@@ -256,7 +257,7 @@ int main(void)
   MX_ADC1_Init();
   MX_OPAMP2_Init();
   MX_ADC2_Init();
-//  MX_SPI2_Init();
+  MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
 
   PRINTF("START\n");
@@ -288,7 +289,7 @@ int main(void)
 //  HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_RESET);
 //  HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_SET);
 
-//  BERKELEY_Init(208,500);
+  BERKELEY_Init(208,500);
 
 	uint8_t err = 0;
 
@@ -464,13 +465,13 @@ int main(void)
 //	BERKELEY_ReadReg(BERKELEY_REG_ADDR_WHO_AM_I, &ReadValue, 0x01);
 //	sprintf((char*)data, "BERK id: %d", ReadValue );
 //	PRINTF("%s\r\n", data);
-//	int16_t ptrRawData[2];
-//	BERKELEY_AccBitDataRead(ptrRawData);
-//	sprintf((char*)data, "ptrRawData[0]: %d\r\nptrRawData[1]: %d\r\n", ptrRawData[0], ptrRawData[1] );
-//	PRINTF("%s", data);
+////	int16_t ptrRawData[2];
+////	BERKELEY_AccBitDataRead(ptrRawData);
+////	sprintf((char*)data, "ptrRawData[0]: %d\r\nptrRawData[1]: %d\r\n", ptrRawData[0], ptrRawData[1] );
+////	PRINTF("%s", data);
 //	float ber_x=0, ber_y=0;
 //	BERKELEY_GetAcceleration(&ber_x, &ber_y, 500);
-//	sprintf((char*)data, "x: %6.2f\r\ny: %6.2f\r\n", ber_x, ber_y );
+//	sprintf((char*)data, "x: %6.6f\r\ny: %6.6f\r\n", ber_x, ber_y );
 //	PRINTF("%s", data);
 //
 //
@@ -531,7 +532,7 @@ int main(void)
 //	  PRINTF("%s\r\n", data);
 //	}
 //
-//	  HAL_Delay(20000);
+//	  HAL_Delay(5000);
   }
   /* USER CODE END 3 */
 }
@@ -633,6 +634,8 @@ static void Send( void )
 	float _x=0.0, _y=0.0, _z=0.0;
 	float arx=0.0, ary=0.0, arz=0.0;
 	float tmp=0.0;
+	float _berkx=0.0, _berky=0.0;
+
 #ifndef ACC
 	uint16_t _vstepup = 0.0;
 #ifndef RELE
@@ -660,7 +663,9 @@ static void Send( void )
 	AppData.Port = LORAWAN_APP_PORT;
 
     uint8_t _type = 0x00;
-#ifdef ACC
+#if defined(ACC) && defined(BERK)
+    _type = 0x04;
+#elif defined(ACC)
     _type = 0x03;
 #else
 #ifndef RELE
@@ -683,20 +688,15 @@ static void Send( void )
 	PRINTF("%s\r\n", data);
 	}
 
-
-//	uint8_t ReadValue = 0;
-//	BERKELEY_ReadReg(BERKELEY_REG_ADDR_WHO_AM_I, &ReadValue, 0x01);
-//	sprintf((char*)data, "BERK id: %d", ReadValue );
-//	PRINTF("%s\r\n", data);
-//	int16_t ptrRawData[2];
-//	BERKELEY_AccBitDataRead(ptrRawData);
-//	sprintf((char*)data, "ptrRawData[0]: %d\r\nptrRawData[1]: %d\r\n", ptrRawData[0], ptrRawData[1] );
-//	PRINTF("%s", data);
-//	float ber_x=0, ber_y=0;
-//	BERKELEY_GetAcceleration(&ber_x, &ber_y, 500);
-//	sprintf((char*)data, "x: %6.2f\r\ny: %6.2f\r\n", ber_x, ber_y );
-//	PRINTF("%s", data);
-
+#if defined(BERK)
+	uint8_t ReadValue = 0;
+	BERKELEY_ReadReg(BERKELEY_REG_ADDR_WHO_AM_I, &ReadValue, 0x01);
+	sprintf((char*)data, "BERK id: %d", ReadValue );
+	PRINTF("%s\r\n", data);
+	BERKELEY_GetAcceleration(&_berkx, &_berky, 500);
+	sprintf((char*)data, "x: %6.4f\r\ny: %6.4f\r\n", _berkx, _berky );
+	PRINTF("%s", data);
+#endif
 
 	float t = 0.0;
 	float h = 0.0;
@@ -754,121 +754,133 @@ static void Send( void )
 	}
 
 #ifndef ACC
+	float vstepup = 0;
+	uint8_t c_power = 3;
+	do{
+		// STEPUP POWER ON
+		HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
+
+		uint8_t c_time = 4;
+		do{
+			HAL_Delay(500);
+			v = 0;
+			res = 0;
+			res = getVSTEPUP(&v);
+			vstepup = ((float)v)*0.0072509765625;
+		}while(vstepup < 24 || c_time-- > 0 );
+
+		if(vstepup >= 24)
+			break;
+		// STEPUP POWER OFF
+		HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
+		HAL_Delay(500);
+	}while(vstepup < 24 || c_power-- > 0 );
+
+	if(res == 0)
+	{
+		sprintf(data,"VSTEPUP ADC: %d", v);
+		PRINTF("%s\r\n", data);
+		_vstepup = v;
+		sprintf(data,"VSTEPUP I: %f", ((float)v)*0.0072509765625);
+		PRINTF("%s\r\n", data);
+	}
+
+	if(vstepup >= 24)
+	{
 #ifndef RELE
 //	 -------------------- SOLO S1 e S2 ------------------------
-	uint16_t s1 = 0;
-	uint16_t s2 = 0;
-	uint8_t res1 = 0, res2 = 0;
-	// STEPUP POWER ON
-	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
-	HAL_Delay(500);
-	//---VSTEPUP---//
-	v = 0;
-	res = getVSTEPUP(&v);
-	if(res == 0)
-	{
-		sprintf(data,"VSTEPUP ADC: %d", v);
-		PRINTF("%s\r\n", data);
-		_vstepup = v;
-		sprintf(data,"VSTEPUP I: %f", ((float)v)*0.0072509765625);
-		PRINTF("%s\r\n", data);
-	}
-	//---S1---//
-	res1 = get420_1(&s1);
-	//---S2---//
-	res2 = get420_2(&s2);
-	if(res1 == 0)
-	{
-		sprintf(data,"S1 ADC: %d", s1);
-		PRINTF("%s\r\n", data);
-		_s1 = s1;
-		sprintf(data,"S1 I: %f", ((float)s1)*0.000008824359940);
-		PRINTF("%s\r\n", data);
-	}
-	if(res2 == 0)
-	{
-		sprintf(data,"S2 ADC: %d", s2);
-		PRINTF("%s\r\n", data);
-		_s2 = s2;
-		sprintf(data,"S2 I: %f", ((float)s2)*0.000008824359940);
-		PRINTF("%s\r\n", data);
-	}
-	// STEPUP POWER OFF
-	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
+		uint16_t s1 = 0;
+		uint16_t s2 = 0;
+		uint8_t res1 = 0, res2 = 0;
+		//---S1---//
+		res1 = get420_1(&s1);
+		//---S2---//
+		res2 = get420_2(&s2);
+		if(res1 == 0)
+		{
+			sprintf(data,"S1 ADC: %d", s1);
+			PRINTF("%s\r\n", data);
+			_s1 = s1;
+			sprintf(data,"S1 I: %f", ((float)s1)*0.000008824359940);
+			PRINTF("%s\r\n", data);
+		}
+		if(res2 == 0)
+		{
+			sprintf(data,"S2 ADC: %d", s2);
+			PRINTF("%s\r\n", data);
+			_s2 = s2;
+			sprintf(data,"S2 I: %f", ((float)s2)*0.000008824359940);
+			PRINTF("%s\r\n", data);
+		}
+		// STEPUP POWER OFF
+		HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
+
 #else
 // -------------------- CON RELE'------------------------
-	uint16_t s = 0;
-	// STEPUP POWER ON
-	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
-	HAL_Delay(500);
-	v = 0;
-	res = getVSTEPUP(&v);
-	if(res == 0)
-	{
-		sprintf(data,"VSTEPUP ADC: %d", v);
-		PRINTF("%s\r\n", data);
-		_vstepup = v;
-		sprintf(data,"VSTEPUP I: %f", ((float)v)*0.0072509765625);
-		PRINTF("%s\r\n", data);
-	}
-	// RELE' BOARD POWER ON
-	HAL_GPIO_WritePin(EN_PWR_OUT_GPIO_Port, EN_PWR_OUT_Pin, GPIO_PIN_RESET);
-	HAL_Delay(100);
-	//---S1---//
-	res = get420_1(&s);
-	if(res == 0)
-	{
-		sprintf(data,"S1a ADC: %d", s);
-		PRINTF("%s\r\n", data);
-		_s1a = s;
-		sprintf(data,"S1a I: %f", (float)((float)s)*0.000008824359940);
-		PRINTF("%s\r\n", data);
-	}
-	// SWITCH RELE'
-	HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_RESET);
-	HAL_Delay(300);
-	res = get420_1(&s);
-	if(res == 0)
-	{
-		sprintf(data,"S1b ADC: %d", s);
-		PRINTF("%s\r\n", data);
-		_s1b = s;
-		sprintf(data,"S1b I: %f", (float)((float)s)*0.000008824359940);
-		PRINTF("%s\r\n", data);
-	}
-	// DE-SWITCH RELE'
-	HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_SET);
+		uint16_t s = 0;
+		// RELE' BOARD POWER ON
+		HAL_GPIO_WritePin(EN_PWR_OUT_GPIO_Port, EN_PWR_OUT_Pin, GPIO_PIN_RESET);
+		HAL_Delay(100);
 
-	//---S2---//
+		//---S1---//
+		s = 0;
+		res = get420_1(&s);
+		if(res == 0)
+		{
+			sprintf(data,"S1a ADC: %d", s);
+			PRINTF("%s\r\n", data);
+			_s1a = s;
+			sprintf(data,"S1a I: %f", (float)((float)s)*0.000008824359940);
+			PRINTF("%s\r\n", data);
+		}
+		// SWITCH RELE'
+		HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_RESET);
+		HAL_Delay(300);
+		s = 0;
+		res = get420_1(&s);
+		if(res == 0)
+		{
+			sprintf(data,"S1b ADC: %d", s);
+			PRINTF("%s\r\n", data);
+			_s1b = s;
+			sprintf(data,"S1b I: %f", (float)((float)s)*0.000008824359940);
+			PRINTF("%s\r\n", data);
+		}
+		// DE-SWITCH RELE'
+		HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_SET);
 
-	res = get420_2(&s);
-	if(res == 0)
-	{
-		sprintf(data,"S2a ADC: %d", s);
-		PRINTF("%s\r\n", data);
-		_s2a = s;
-		sprintf(data,"S2a I: %f", (float)((double)s)*0.000008824359940);
-		PRINTF("%s\r\n", data);
-	}
-	// SWITCH RELE'
-	HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_RESET);
-	HAL_Delay(300);
-	res = get420_2(&s);
-	if(res == 0)
-	{
-		sprintf(data,"S2b ADC: %d", s);
-		PRINTF("%s\r\n", data);
-		_s2b = s;
-		sprintf(data,"S2b I: %f", (float)((double)s)*0.000008824359940);
-		PRINTF("%s\r\n", data);
-	}
-	// DE-SWITCH RELE'
-	HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_SET);
-	// RELE' BOARD POWER OFF
-	HAL_GPIO_WritePin(EN_PWR_OUT_GPIO_Port, EN_PWR_OUT_Pin, GPIO_PIN_SET);
-	// STEPUP POWER OFF
-	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
+		//---S2---//
+		s = 0;
+		res = get420_2(&s);
+		if(res == 0)
+		{
+			sprintf(data,"S2a ADC: %d", s);
+			PRINTF("%s\r\n", data);
+			_s2a = s;
+			sprintf(data,"S2a I: %f", (float)((double)s)*0.000008824359940);
+			PRINTF("%s\r\n", data);
+		}
+		// SWITCH RELE'
+		HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_RESET);
+		HAL_Delay(300);
+		s = 0;
+		res = get420_2(&s);
+		if(res == 0)
+		{
+			sprintf(data,"S2b ADC: %d", s);
+			PRINTF("%s\r\n", data);
+			_s2b = s;
+			sprintf(data,"S2b I: %f", (float)((double)s)*0.000008824359940);
+			PRINTF("%s\r\n", data);
+		}
+		// DE-SWITCH RELE'
+		HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_SET);
+		// RELE' BOARD POWER OFF
+		HAL_GPIO_WritePin(EN_PWR_OUT_GPIO_Port, EN_PWR_OUT_Pin, GPIO_PIN_SET);
+		// STEPUP POWER OFF
+		HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
 #endif
+	}
 #endif
 
   memcpy(&AppData.Buff[i], &_type, sizeof(_type));
@@ -885,6 +897,12 @@ static void Send( void )
   i+=sizeof(_y);
   memcpy(&AppData.Buff[i], &_z, sizeof(_z));
   i+=sizeof(_z);
+#if defined(BERK)
+  memcpy(&AppData.Buff[i], &_berkx, sizeof(_berkx));
+  i+=sizeof(_berkx);
+  memcpy(&AppData.Buff[i], &_berky, sizeof(_berky));
+  i+=sizeof(_berky);
+#endif
 #ifndef ACC
   memcpy(&AppData.Buff[i], &_vstepup, sizeof(_vstepup));
   i+=sizeof(_vstepup);

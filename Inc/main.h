@@ -106,8 +106,8 @@ void Error_Handler(void);
 #define EXT_GPIO_Output_GPIO_Port GPIOB
 #define BERK_CS_Pin GPIO_PIN_12
 #define BERK_CS_GPIO_Port GPIOB
-#define SCK_BERK_Pin GPIO_PIN_13
-#define SCK_BERK_GPIO_Port GPIOB
+#define BERK_SCK_Pin GPIO_PIN_13
+#define BERK_SCK_GPIO_Port GPIOB
 #define BERK_MISO_Pin GPIO_PIN_14
 #define BERK_MISO_GPIO_Port GPIOB
 #define BERK_MOSI_Pin GPIO_PIN_15
