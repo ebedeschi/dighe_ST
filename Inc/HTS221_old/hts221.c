@@ -64,7 +64,7 @@ static HUM_TEMP_StatusTypeDef HTS221_IO_Write(uint8_t* pBuffer, uint8_t DeviceAd
  */
 
 
-extern I2C_HandleTypeDef hi2c2;
+
 
 /* Temperature in degree for calibration  */
 float T0_degC, T1_degC;

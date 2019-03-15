@@ -57,6 +57,7 @@
 #include "ism330dlc/ism330dlc_reg.h"
 #include "ism330dlc/ism330dlc_app.h"
 #include "HTS221/HTS221Sensor.h"
+#include "HTS221_old/hts221.h"
 #include "BERKELEY/BERKELEY.h"
 #include "BERKELEY/berkeley_app.h"
 #include "analog/analog.h"
@@ -79,7 +80,6 @@
 
 //#define RELE
 #define ACC
-#define BERK
 
 /*!
  * Defines the application data transmission duty cycle. 5s, value in [ms].
@@ -164,6 +164,8 @@ static LoRaMainCallback_t LoRaMainCallbacks = { HW_GetBatteryLevel,
 static uint8_t AppLedStateOn = RESET;
 
 static TimerEvent_t TxTimer;
+static TimerEvent_t AccTimer;
+static TimerEvent_t TiltTimer;
 
 /* !
  *Initialises the Lora Parameters
@@ -192,6 +194,12 @@ static uint8_t whoamI, rst;
 uint8_t flag;
 int16_t _tout, _tout0, _tout1;
 uint32_t app_tx_dutycyle = DEFAULT_TX_DUTYCYCLE;
+
+extern uint8_t timer_ism330dlc_read_acc_data;
+extern uint8_t tim_berkeley_read_tilt_data;
+
+void acc_acq(uint16_t ms, int16_t* acc_mean, int16_t* acc_min, int16_t* acc_max, uint16_t* acc_std);
+void tilt_acq(uint16_t ms, int16_t* tilt_mean, int16_t* tilt_min, int16_t* tilt_max, uint16_t* tilt_std);
 
 char data[50];
 /* USER CODE END PV */
@@ -289,7 +297,8 @@ int main(void)
 //  HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_RESET);
 //  HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_SET);
 
-  BERKELEY_Init(208,500);
+
+  BERKELEY_Init(208,2000);
 
 	uint8_t err = 0;
 
@@ -460,37 +469,53 @@ int main(void)
 //	HAL_Delay(100);
 //	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
 
-
 //	uint8_t ReadValue = 0;
 //	BERKELEY_ReadReg(BERKELEY_REG_ADDR_WHO_AM_I, &ReadValue, 0x01);
 //	sprintf((char*)data, "BERK id: %d", ReadValue );
 //	PRINTF("%s\r\n", data);
-////	int16_t ptrRawData[2];
-////	BERKELEY_AccBitDataRead(ptrRawData);
-////	sprintf((char*)data, "ptrRawData[0]: %d\r\nptrRawData[1]: %d\r\n", ptrRawData[0], ptrRawData[1] );
-////	PRINTF("%s", data);
+//	int16_t ptrRawData[2];
+//	BERKELEY_AccBitDataRead(ptrRawData);
+//	sprintf((char*)data, "ptrRawData[0]: %d\r\nptrRawData[1]: %d\r\n", ptrRawData[0], ptrRawData[1] );
+//	PRINTF("%s", data);
 //	float ber_x=0, ber_y=0;
-//	BERKELEY_GetAcceleration(&ber_x, &ber_y, 500);
+//	BERKELEY_GetAcceleration(&ber_x, &ber_y, 2000);
 //	sprintf((char*)data, "x: %6.6f\r\ny: %6.6f\r\n", ber_x, ber_y );
 //	PRINTF("%s", data);
 //
 //
-//	HTS221Sensor(&hi2c2, HTS221_I2C_ADDRESS);
-//	HTS221SensorEnable();
+////	HTS221Sensor(&hi2c2, HTS221_I2C_ADDRESS);
+////	HTS221SensorEnable();
+////	uint8_t id = 0;
+////	HTS221SensorReadID(&id);
+////	sprintf((char*)data, "id: %d", id );
+////	PRINTF("%s\r\n", data);
+////	HAL_Delay(100);
+////	float temp = 0;
+////	HTS221SensorGetTemperature(&temp);
+////	sprintf((char*)data, "Temp: %6.2f", temp );
+////	PRINTF("%s\r\n", data);
+////	float hum = 0;
+////	HTS221SensorGetHumidity(&hum);
+////	sprintf((char*)data, "Hum: %6.2f", hum );
+////	PRINTF("%s\r\n", data);
+////	HTS221SensorDisable();
+//
+//	HTS221_Init();
 //	uint8_t id = 0;
-//	HTS221SensorReadID(&id);
+//	HTS221_ReadID(&id);
 //	sprintf((char*)data, "id: %d", id );
 //	PRINTF("%s\r\n", data);
 //	HAL_Delay(100);
 //	float temp = 0;
-//	HTS221SensorGetTemperature(&temp);
+//    HTS221_GetTemperature(&temp);
 //	sprintf((char*)data, "Temp: %6.2f", temp );
 //	PRINTF("%s\r\n", data);
 //	float hum = 0;
-//	HTS221SensorGetHumidity(&hum);
+//    HTS221_GetHumidity(&hum);
 //	sprintf((char*)data, "Hum: %6.2f", hum );
 //	PRINTF("%s\r\n", data);
-//	HTS221SensorDisable();
+//	HTS221_Power_OFF();
+//
 //
 //	float x=0.0, y=0.0, z=0.0;
 //	float arx=0.0, ary=0.0, arz=0.0;
@@ -532,7 +557,21 @@ int main(void)
 //	  PRINTF("%s\r\n", data);
 //	}
 //
-//	  HAL_Delay(5000);
+//
+//	int16_t acc_mean[3] = {0.0};
+//	uint16_t acc_std[3] = {0.0};
+//	int16_t acc_min[3] = {0.0};
+//	int16_t acc_max[3] = {0.0};
+//	acc_acq(5000, acc_mean, acc_min, acc_max, acc_std);
+//
+//	int16_t tilt_mean[3] = {0.0};
+//	uint16_t tilt_std[3] = {0.0};
+//	int16_t tilt_min[3] = {0.0};
+//	int16_t tilt_max[3] = {0.0};
+//	tilt_acq(1000, tilt_mean, tilt_min, tilt_max, tilt_std);
+//
+//
+//	  HAL_Delay(10000);
   }
   /* USER CODE END 3 */
 }
@@ -629,12 +668,20 @@ static void Send( void )
 	PRINTF("preSEND\r\n", data);
 
 	uint16_t _vin = 0.0;
-	uint16_t _temp = 0.0;
-	uint16_t _hum = 0.0;
+	int16_t _temp = 0.0;
+	int16_t _hum = 0.0;
 	float _x=0.0, _y=0.0, _z=0.0;
 	float arx=0.0, ary=0.0, arz=0.0;
 	float tmp=0.0;
 	float _berkx=0.0, _berky=0.0;
+	int16_t _acc_mean[3] = {0.0};
+	uint16_t _acc_std[3] = {0.0};
+	int16_t _acc_min[3] = {0.0};
+	int16_t _acc_max[3] = {0.0};
+	int16_t _tilt_mean[3] = {0.0};
+	uint16_t _tilt_std[3] = {0.0};
+	int16_t _tilt_min[3] = {0.0};
+	int16_t _tilt_max[3] = {0.0};
 
 #ifndef ACC
 	uint16_t _vstepup = 0.0;
@@ -655,7 +702,7 @@ static void Send( void )
     return;
   }
 
-  app_tx_dutycyle = 600000;
+  app_tx_dutycyle = 300000;
 
 	PRINTF("preSEND\r\n", data);
 
@@ -663,10 +710,8 @@ static void Send( void )
 	AppData.Port = LORAWAN_APP_PORT;
 
     uint8_t _type = 0x00;
-#if defined(ACC) && defined(BERK)
-    _type = 0x04;
-#elif defined(ACC)
-    _type = 0x03;
+#if defined(ACC)
+    _type = 0x05;
 #else
 #ifndef RELE
     _type = 0x01;
@@ -698,23 +743,40 @@ static void Send( void )
 	PRINTF("%s", data);
 #endif
 
+//	float t = 0.0;
+//	float h = 0.0;
+//	uint8_t id = 0;
+//	HTS221Sensor(&hi2c2, HTS221_I2C_ADDRESS);
+//	HTS221SensorEnable();
+//	HTS221SensorReadID(&id);
+//	sprintf((char*)data, "id: %d", id );
+//	PRINTF("%s\r\n", data);
+//	HTS221SensorGetTemperature(&t);
+//	_temp = (uint16_t) (( t + 80 ) * 100);
+//	sprintf((char*)data, "Temp: %6.2f", t );
+//	PRINTF("%s\r\n", data);
+//	HTS221SensorGetHumidity(&h);
+//	_hum = (uint16_t) (h * 100);
+//	sprintf((char*)data, "Hum: %6.2f", h );
+//	PRINTF("%s\r\n", data);
+//	HTS221SensorDisable();
+
 	float t = 0.0;
 	float h = 0.0;
 	uint8_t id = 0;
-	HTS221Sensor(&hi2c2, HTS221_I2C_ADDRESS);
-	HTS221SensorEnable();
-	HTS221SensorReadID(&id);
+	HTS221_Init();
+	HTS221_ReadID(&id);
 	sprintf((char*)data, "id: %d", id );
 	PRINTF("%s\r\n", data);
-	HTS221SensorGetTemperature(&t);
-	_temp = (uint16_t) (( t + 80 ) * 100);
+	HTS221_GetTemperature(&t);
+	_temp = (int16_t) (t * 100);
 	sprintf((char*)data, "Temp: %6.2f", t );
 	PRINTF("%s\r\n", data);
-	HTS221SensorGetHumidity(&h);
-	_hum = (uint16_t) (h * 100);
+	HTS221_GetHumidity(&h);
+	_hum = (int16_t) (h * 100);
 	sprintf((char*)data, "Hum: %6.2f", h );
 	PRINTF("%s\r\n", data);
-	HTS221SensorDisable();
+	HTS221_Power_OFF();
 
 	uint8_t err = 0;
 	err = ISM330DLC_ReadAcceleration(&_x, &_y, &_z);
@@ -752,6 +814,13 @@ static void Send( void )
 	  sprintf((char*)data, "Temperature [degC]:%6.2f", tmp);
 	  PRINTF("%s\r\n", data);
 	}
+
+#ifdef ACC
+	acc_acq(3000, _acc_mean, _acc_min, _acc_max, _acc_std);
+	tilt_acq(3000, _tilt_mean, _tilt_min, _tilt_max, _tilt_std);
+#else
+	acc_acq(500, _acc_mean, _acc_min, _acc_max, _acc_std);
+#endif
 
 #ifndef ACC
 	float vstepup = 0;
@@ -891,17 +960,23 @@ static void Send( void )
   i+=sizeof(_temp);
   memcpy(&AppData.Buff[i], &_hum, sizeof(_hum));
   i+=sizeof(_hum);
-  memcpy(&AppData.Buff[i], &_x, sizeof(_x));
-  i+=sizeof(_x);
-  memcpy(&AppData.Buff[i], &_y, sizeof(_y));
-  i+=sizeof(_y);
-  memcpy(&AppData.Buff[i], &_z, sizeof(_z));
-  i+=sizeof(_z);
-#if defined(BERK)
-  memcpy(&AppData.Buff[i], &_berkx, sizeof(_berkx));
-  i+=sizeof(_berkx);
-  memcpy(&AppData.Buff[i], &_berky, sizeof(_berky));
-  i+=sizeof(_berky);
+  memcpy(&AppData.Buff[i], _acc_mean, sizeof(_acc_mean[0])*3);
+  i+=sizeof(_acc_mean[0])*3;
+#ifdef ACC
+  memcpy(&AppData.Buff[i], _acc_min, sizeof(_acc_min[0])*3);
+  i+=sizeof(_acc_min[0])*3;
+  memcpy(&AppData.Buff[i], _acc_max, sizeof(_acc_max[0])*3);
+  i+=sizeof(_acc_max[0])*3;
+  memcpy(&AppData.Buff[i], _acc_std, sizeof(_acc_std[0])*3);
+  i+=sizeof(_acc_std[0])*3;
+  memcpy(&AppData.Buff[i], _tilt_mean, sizeof(_tilt_mean[0])*2);
+  i+=sizeof(_tilt_mean[0])*2;
+  memcpy(&AppData.Buff[i], _tilt_min, sizeof(_tilt_min[0])*2);
+  i+=sizeof(_tilt_min[0])*2;
+  memcpy(&AppData.Buff[i], _tilt_max, sizeof(_tilt_max[0])*2);
+  i+=sizeof(_tilt_max[0])*2;
+  memcpy(&AppData.Buff[i], _tilt_std, sizeof(_tilt_std[0])*2);
+  i+=sizeof(_tilt_std[0])*2;
 #endif
 #ifndef ACC
   memcpy(&AppData.Buff[i], &_vstepup, sizeof(_vstepup));
@@ -1043,6 +1118,145 @@ static void LORA_TxNeeded ( void )
 
   LORA_send( &AppData, LORAWAN_UNCONFIRMED_MSG);
 }
+
+static void EndAccAcqusitionTimerEvent( void )
+{
+	TimerStop(&AccTimer);
+	timer_ism330dlc_read_acc_data = 1;
+	sprintf((char*)data, "stop acc timer");
+	PRINTF("%s\r\n", data);
+}
+
+void acc_acq(uint16_t ms, int16_t* acc_mean, int16_t* acc_min, int16_t* acc_max, uint16_t* acc_std)
+{
+	uint32_t acc_samples = 0;
+
+	ISM330DLC_ResetAccInternals();
+
+	timer_ism330dlc_read_acc_data = 0;
+	TimerInit( &AccTimer, EndAccAcqusitionTimerEvent );
+	TimerSetValue( &AccTimer,  ms);
+	TimerStart( &AccTimer);
+
+	sprintf((char*)data, "start acc timer");
+	PRINTF("%s\r\n", data);
+
+	while(timer_ism330dlc_read_acc_data == 0)
+	{
+		ISM330DLC_ReadAccData();
+	}
+	ISM330DLC_AccComputeStats(&acc_samples, 2);
+
+	sprintf((char*)data, "counter_acc_data :%d", acc_samples);
+	PRINTF("%s\r\n", data);
+
+	double acc_var[3] = {0.0};
+
+	ISM330DLC_GetMeanAcc(acc_mean);
+	ISM330DLC_GetVarAcc(acc_var);
+	ISM330DLC_GetStdAcc(acc_std);
+	ISM330DLC_GetMinAcc(acc_min);
+	ISM330DLC_GetMaxAcc(acc_max);
+
+	sprintf((char*)data, "Mean [16]:%d\t%d\t%d", acc_mean[0], acc_mean[1], acc_mean[2]);
+	PRINTF("%s\r\n", data);
+	sprintf((char*)data, "Min [16]:%d\t%d\t%d", acc_min[0], acc_min[1], acc_min[2]);
+	PRINTF("%s\r\n", data);
+	sprintf((char*)data, "Max [16]:%d\t%d\t%d", acc_max[0], acc_max[1], acc_max[2]);
+	PRINTF("%s\r\n", data);
+
+	float acc_mean_f[3] = {0.0};
+	float acc_min_f[3] = {0.0};
+	float acc_max_f[3] = {0.0};
+
+	ISM330DLC_AccGetmg(ISM330DLC_2g, acc_mean, acc_mean_f);
+	ISM330DLC_AccGetmg(ISM330DLC_2g, acc_min, acc_min_f);
+	ISM330DLC_AccGetmg(ISM330DLC_2g, acc_max, acc_max_f);
+
+	sprintf((char*)data, "Mean [mg]:%4.3f\t%4.3f\t%4.3f", acc_mean_f[0], acc_mean_f[1], acc_mean_f[2]);
+	PRINTF("%s\r\n", data);
+	sprintf((char*)data, "Var [mg]:%4.6f\t%4.6f\t%4.6f", acc_var[0], acc_var[1], acc_var[2]);
+	PRINTF("%s\r\n", data);
+	sprintf((char*)data, "Min [mg]:%4.3f\t%4.3f\t%4.3f", acc_min_f[0], acc_min_f[1], acc_min_f[2]);
+	PRINTF("%s\r\n", data);
+	sprintf((char*)data, "Max [mg]:%4.3f\t%4.3f\t%4.3f", acc_max_f[0], acc_max_f[1], acc_max_f[2]);
+	PRINTF("%s\r\n", data);
+	sprintf((char*)data, "Sdt [16]:%d\t%d\t%d", acc_std[0], acc_std[1], acc_std[2]);
+	PRINTF("%s\r\n", data);
+
+}
+
+static void EndTiltAcqusitionTimerEvent( void )
+{
+	TimerStop(&TiltTimer);
+	tim_berkeley_read_tilt_data = 1;
+	sprintf((char*)data, "stop tilt timer");
+	PRINTF("%s\r\n", data);
+}
+
+void tilt_acq(uint16_t ms, int16_t* tilt_mean, int16_t* tilt_min, int16_t* tilt_max, uint16_t* tilt_std)
+{
+	uint32_t tilt_samples = 0;
+
+	BERKELEY_ResetTiltInternals();
+
+	tim_berkeley_read_tilt_data = 0;
+	TimerInit( &TiltTimer, EndTiltAcqusitionTimerEvent );
+	TimerSetValue( &TiltTimer,  ms);
+	TimerStart( &TiltTimer);
+
+	sprintf((char*)data, "start tilt timer");
+	PRINTF("%s\r\n", data);
+
+	while(tim_berkeley_read_tilt_data == 0)
+	{
+		BERKELEY_ReadTiltData();
+	}
+	BERKELEY_TiltComputeStats(&tilt_samples, 2000);
+
+	sprintf((char*)data, "counter_tilt_data :%d", tilt_samples);
+	PRINTF("%s\r\n", data);
+
+	double tilt_var[2] = {0.0};
+
+	BERKELEY_GetMeanTilt(tilt_mean);
+	BERKELEY_GetVarTilt(tilt_var);
+	BERKELEY_GetStdTilt(tilt_std);
+	BERKELEY_GetMinTilt(tilt_min);
+	BERKELEY_GetMaxTilt(tilt_max);
+
+	sprintf((char*)data, "Tilt Mean [16]:%d\t%d", tilt_mean[0], tilt_mean[1]);
+	PRINTF("%s\r\n", data);
+	sprintf((char*)data, "Tilt Min [16]:%d\t%d", tilt_min[0], tilt_min[1]);
+	PRINTF("%s\r\n", data);
+	sprintf((char*)data, "Tilt Max [16]:%d\t%d", tilt_max[0], tilt_max[1]);
+	PRINTF("%s\r\n", data);
+
+	float tilt_mean_f[2] = {0.0};
+	float tilt_min_f[2] = {0.0};
+	float tilt_max_f[2] = {0.0};
+
+	int8_t i=0;
+	for (i=0;i<2;i++)
+	{
+		tilt_mean_f[i] = BERKELEY_ConvertMG(tilt_mean[i], 2000);
+		tilt_min_f[i] = BERKELEY_ConvertMG(tilt_min[i], 2000);
+		tilt_max_f[i] = BERKELEY_ConvertMG(tilt_max[i], 2000);
+	}
+
+	sprintf((char*)data, "Tilt Mean [mg]:%4.6f\t%4.6f", tilt_mean_f[0], tilt_mean_f[1]);
+	PRINTF("%s\r\n", data);
+	sprintf((char*)data, "Tilt Var [mg]:%4.6f\t%4.6f", tilt_var[0], tilt_var[1]);
+	PRINTF("%s\r\n", data);
+	sprintf((char*)data, "Tilt Min [mg]:%4.6f\t%4.6f", tilt_min_f[0], tilt_min_f[1]);
+	PRINTF("%s\r\n", data);
+	sprintf((char*)data, "Tilt Max [mg]:%4.6f\t%4.6f", tilt_max_f[0], tilt_max_f[1]);
+	PRINTF("%s\r\n", data);
+	sprintf((char*)data, "Tilt Sdt [16]:%d\t%d", tilt_std[0], tilt_std[1]);
+	PRINTF("%s\r\n", data);
+
+}
+
 /* USER CODE END 4 */
 
 /**

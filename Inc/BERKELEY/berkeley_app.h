@@ -10,18 +10,19 @@
 #include "BERKELEY.h"
 #include <stdlib.h>
 
-uint8_t     BERKELEY_ReadTiltData                (int16_t *tilt_buffer, uint8_t stats_flag);
-void        BERKELEY_TiltComputeStats            (uint32_t tilt_samples, uint8_t tilt_fullscale);
-void        BERKELEY_GetMeanTilt                 (float *buffer);
-void        BERKELEY_GetStdTilt                  (float *buffer);
-void        BERKELEY_GetMinTilt                  (float *buffer);
-void        BERKELEY_GetMaxTilt                  (float *buffer);
+uint8_t BERKELEY_ReadTiltData();
+void BERKELEY_TiltComputeStats(uint32_t* tilt_samples, uint8_t tilt_fullscale);
+void BERKELEY_GetMeanTilt(int16_t *buffer);
+void BERKELEY_GetVarTilt(double *buffer);
+void BERKELEY_GetStdTilt(uint16_t *buffer);
+void BERKELEY_GetMinTilt(int16_t *buffer);
+void BERKELEY_GetMaxTilt(int16_t *buffer);
 
-void        BERKELEY_ResetTiltInternals          (void);
+void BERKELEY_ResetTiltInternals(void);
 
-void        BERKELEY_DataReadyCallback         (void);
+void BERKELEY_DataReadyCallback(void);
 
-void        BERKELEY_Init(uint16_t odr, uint16_t fs);
+void BERKELEY_Init(uint16_t odr, uint16_t fs);
 
 
 #define     TILT_GET_ODR_CONFIG(odr)         (odr == 104 ? BERKELEY_ODR_104HZ : BERKELEY_ODR_208HZ)

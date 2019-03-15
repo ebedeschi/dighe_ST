@@ -126,14 +126,14 @@
  * IEEE Organizationally Unique Identifier ( OUI ) (big endian)
  * \remark This is unique to a company or organization
  */
-#define IEEE_OUI                                           0x01, 0x01, 0x01
+#define IEEE_OUI                                           0x00, 0x00, 0x00
 
 /*!
  * Mote device IEEE EUI (big endian)
  *
  * \remark see STATIC_DEVICE_EUI comments
  */
-#define LORAWAN_DEVICE_EUI                                 { IEEE_OUI, 0x01, 0x01, 0x01, 0x01, 0x01 }
+#define LORAWAN_DEVICE_EUI                                 { IEEE_OUI, 0x00, 0x00, 0x00, 0x00, 0x22 }
 
 /*!
  * App/Join server IEEE EUI (big endian)

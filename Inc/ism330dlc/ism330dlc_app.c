@@ -18,6 +18,228 @@ float acceleration_mg[3];
 float angular_rate_mdps[3];
 float temperature_degC;
 
+/** **************************************************************************
+ ** @brief Private variables for ism330dlc acc data
+ ** *************************************************************************/
+static ism330dlc_ctx_t ism330dlc_dev_ctx;
+static uint8_t whoamI, rst;
+
+static int64_t acc_accumulator[3] = {0};
+static uint64_t acc_square_accumulator[3] = {0};
+
+static int16_t acc_min_lsb[3] = {0};
+static int16_t acc_max_lsb[3] = {0};
+
+static int16_t acc_mean[3] = {0.0};
+static double  acc_var[3] = {0.0};
+static uint16_t acc_std[3] = {0.0};
+static int16_t acc_min[3] = {0.0};
+static int16_t acc_max[3] = {0.0};
+
+
+/** **************************************************************************
+ ** @brief ism330dlc data available trigger
+ ** *************************************************************************/
+volatile uint8_t timer_ism330dlc_read_acc_data = 0;
+
+volatile uint64_t counter_acc_data = 0;
+
+/** **************************************************************************
+ ** @brief Read accnetometer data and accumulate for averaging
+ ** @param none
+ ** @return 1
+ ** *************************************************************************/
+uint8_t ISM330DLC_ReadAccData()
+{
+    uint8_t i;
+    uint8_t err = 0;
+
+	memset(data_raw_acceleration.u8bit, 0x00, 3*sizeof(int16_t));
+	err = ism330dlc_acceleration_raw_get(&dev_ctx, data_raw_acceleration.u8bit);
+	if(err != HAL_OK)
+		return 0;
+
+    for(i = 0; i < 3; i++)
+    {
+        acc_accumulator[i] += data_raw_acceleration.i16bit[i];
+
+        acc_square_accumulator[i] += (uint64_t)( data_raw_acceleration.i16bit[i] * data_raw_acceleration.i16bit[i] );
+
+        if( (data_raw_acceleration.i16bit[i] < acc_min_lsb[i]) || (acc_min_lsb[i] == 0) )
+        {
+            acc_min_lsb[i] = data_raw_acceleration.i16bit[i];
+        }
+        else if( (data_raw_acceleration.i16bit[i] > acc_max_lsb[i])  || (acc_max_lsb[i] == 0) )
+        {
+            acc_max_lsb[i] = data_raw_acceleration.i16bit[i];
+        }
+    }
+    counter_acc_data++;
+
+    if(counter_acc_data>=6000)
+    	timer_ism330dlc_read_acc_data=1;
+
+    return 1;
+}
+
+/** **************************************************************************
+ ** @brief Compute mean, variance and std for acc data
+ ** @param acc_samples number of samples
+ ** @param acc_fullscale full scale in gauss
+ ** @return none
+ ** *************************************************************************/
+void ISM330DLC_AccComputeStats(uint32_t* acc_samples, uint8_t acc_fullscale)
+{
+    uint8_t i= 0;
+
+    for(i = 0; i < 3; i++ )
+    {
+        acc_mean[i] = (int16_t)( (double)acc_accumulator[i] / counter_acc_data );
+
+        acc_var[i] = ( ((double)acc_square_accumulator[i] / counter_acc_data) - (acc_mean[i] * acc_mean[i]) );
+
+        acc_var[i] = ACC_GET_mg(acc_fullscale,ACC_GET_mg(acc_fullscale, acc_var[i]));
+
+        acc_std[i] = (uint16_t) sqrt(acc_var[i]);
+
+        acc_min[i] = acc_min_lsb[i];
+
+        acc_max[i] = acc_max_lsb[i];
+    }
+
+    *acc_samples = counter_acc_data;
+}
+
+void ISM330DLC_AccGetmg(ism330dlc_fs_xl_t fs_xl, int16_t* data_raw, float* acceleration_mg)
+{
+	switch(fs_xl)
+	{
+		case ISM330DLC_2g:
+			  acceleration_mg[0] = ISM330DLC_FROM_FS_2g_TO_mg( data_raw[0]);
+			  acceleration_mg[1] = ISM330DLC_FROM_FS_2g_TO_mg( data_raw[1]);
+			  acceleration_mg[2] = ISM330DLC_FROM_FS_2g_TO_mg( data_raw[2]);
+			break;
+		case ISM330DLC_4g:
+			  acceleration_mg[0] = ISM330DLC_FROM_FS_4g_TO_mg( data_raw[0]);
+			  acceleration_mg[1] = ISM330DLC_FROM_FS_4g_TO_mg( data_raw[1]);
+			  acceleration_mg[2] = ISM330DLC_FROM_FS_4g_TO_mg( data_raw[2]);
+			break;
+		case ISM330DLC_8g:
+			  acceleration_mg[0] = ISM330DLC_FROM_FS_8g_TO_mg( data_raw[0]);
+			  acceleration_mg[1] = ISM330DLC_FROM_FS_8g_TO_mg( data_raw[1]);
+			  acceleration_mg[2] = ISM330DLC_FROM_FS_8g_TO_mg( data_raw[2]);
+			break;
+		case ISM330DLC_16g:
+			  acceleration_mg[0] = ISM330DLC_FROM_FS_16g_TO_mg( data_raw[0]);
+			  acceleration_mg[1] = ISM330DLC_FROM_FS_16g_TO_mg( data_raw[1]);
+			  acceleration_mg[2] = ISM330DLC_FROM_FS_16g_TO_mg( data_raw[2]);
+			break;
+		default:
+			break;
+	}
+	return;
+}
+
+/** **************************************************************************
+ ** @brief Get mean acc data
+ ** @param buffer
+ ** @return none
+ ** *************************************************************************/
+void ISM330DLC_GetMeanAcc(int16_t *buffer)
+{
+
+    buffer[0] = acc_mean[0];
+    buffer[1] = acc_mean[1];
+    buffer[2] = acc_mean[2];
+
+}
+
+/** **************************************************************************
+ ** @brief Get var acc data
+ ** @param buffer
+ ** @return none
+ ** *************************************************************************/
+void ISM330DLC_GetVarAcc(double *buffer)
+{
+
+    buffer[0] = acc_var[0];
+    buffer[1] = acc_var[1];
+    buffer[2] = acc_var[2];
+
+}
+
+/** **************************************************************************
+ ** @brief Get std acc data
+ ** @param buffer
+ ** @return none
+ ** *************************************************************************/
+void ISM330DLC_GetStdAcc(uint16_t *buffer)
+{
+
+    buffer[0] = acc_std[0];
+    buffer[1] = acc_std[1];
+    buffer[2] = acc_std[2];
+
+}
+
+/** **************************************************************************
+ ** @brief Get std mag data
+ ** @param buffer
+ ** @return none
+ ** *************************************************************************/
+void ISM330DLC_GetMinAcc(int16_t *buffer)
+{
+
+    buffer[0] = acc_min[0];
+    buffer[1] = acc_min[1];
+    buffer[2] = acc_min[2];
+
+}
+
+/** **************************************************************************
+ ** @brief Get min mag data
+ ** @param buffer
+ ** @return none
+ ** *************************************************************************/
+void ISM330DLC_GetMaxAcc(int16_t *buffer)
+{
+
+    buffer[0] = acc_max[0];
+    buffer[1] = acc_max[1];
+    buffer[2] = acc_max[2];
+
+}
+
+/** **************************************************************************
+ ** @brief Reset internal accumulators
+ ** @param none
+ ** @return none
+ ** *************************************************************************/
+void ISM330DLC_ResetAccInternals(void)
+{
+    uint8_t i;
+
+    counter_acc_data = 0;
+
+    for(i = 0; i < 3; i++)
+    {
+        acc_accumulator[i] = 0;
+        acc_square_accumulator[i] = 0;
+        acc_min_lsb[i] = 0 ;
+        acc_max_lsb[i] = 0;
+    }
+}
+
+/** **************************************************************************
+ ** @brief ISM330DLC_ drdy callback
+ ** @param none
+ ** @return none
+ ** *************************************************************************/
+void ISM330DLC_DataReadyCallback(void)
+{
+    timer_ism330dlc_read_acc_data = 1;
+}
+
 void getDev_ctx(ism330dlc_ctx_t* d)
 {
 	d = &dev_ctx;
@@ -104,31 +326,7 @@ uint8_t ISM330DLC_ReadAcceleration(float* x, float* y, float* z)
 		err = ism330dlc_acceleration_raw_get(&dev_ctx, data_raw_acceleration.u8bit);
 		if(err != HAL_OK)
 			return err;
-		switch(dev_ctrl1_xl.fs_xl)
-		{
-		case ISM330DLC_2g:
-			  acceleration_mg[0] = ISM330DLC_FROM_FS_2g_TO_mg( data_raw_acceleration.i16bit[0]);
-			  acceleration_mg[1] = ISM330DLC_FROM_FS_2g_TO_mg( data_raw_acceleration.i16bit[1]);
-			  acceleration_mg[2] = ISM330DLC_FROM_FS_2g_TO_mg( data_raw_acceleration.i16bit[2]);
-			break;
-		case ISM330DLC_4g:
-			  acceleration_mg[0] = ISM330DLC_FROM_FS_4g_TO_mg( data_raw_acceleration.i16bit[0]);
-			  acceleration_mg[1] = ISM330DLC_FROM_FS_4g_TO_mg( data_raw_acceleration.i16bit[1]);
-			  acceleration_mg[2] = ISM330DLC_FROM_FS_4g_TO_mg( data_raw_acceleration.i16bit[2]);
-			break;
-		case ISM330DLC_8g:
-			  acceleration_mg[0] = ISM330DLC_FROM_FS_8g_TO_mg( data_raw_acceleration.i16bit[0]);
-			  acceleration_mg[1] = ISM330DLC_FROM_FS_8g_TO_mg( data_raw_acceleration.i16bit[1]);
-			  acceleration_mg[2] = ISM330DLC_FROM_FS_8g_TO_mg( data_raw_acceleration.i16bit[2]);
-			break;
-		case ISM330DLC_16g:
-			  acceleration_mg[0] = ISM330DLC_FROM_FS_16g_TO_mg( data_raw_acceleration.i16bit[0]);
-			  acceleration_mg[1] = ISM330DLC_FROM_FS_16g_TO_mg( data_raw_acceleration.i16bit[1]);
-			  acceleration_mg[2] = ISM330DLC_FROM_FS_16g_TO_mg( data_raw_acceleration.i16bit[2]);
-			break;
-		default:
-			break;
-		}
+		ISM330DLC_AccGetmg(dev_ctrl1_xl.fs_xl, data_raw_acceleration.i16bit, acceleration_mg);
 	}
 	*x = acceleration_mg[0];
 	*y = acceleration_mg[1];
