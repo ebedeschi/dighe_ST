@@ -161,7 +161,7 @@ static LoRaMainCallback_t LoRaMainCallbacks = { HW_GetBatteryLevel,
 /*!
  * Specifies the state of the application LED
  */
-static uint8_t AppLedStateOn = RESET;
+static uint8_t AppState = RESET;
 
 static TimerEvent_t TxTimer;
 static TimerEvent_t AccTimer;
@@ -194,6 +194,7 @@ static uint8_t whoamI, rst;
 uint8_t flag;
 int16_t _tout, _tout0, _tout1;
 uint32_t app_tx_dutycyle = DEFAULT_TX_DUTYCYCLE;
+uint32_t new_tx_dutycyle = 30000;
 
 extern uint8_t timer_ism330dlc_read_acc_data;
 extern uint8_t tim_berkeley_read_tilt_data;
@@ -297,9 +298,9 @@ int main(void)
 //  HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_RESET);
 //  HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_SET);
 
-
+#ifdef ACC
   BERKELEY_Init(208,2000);
-
+#endif
 	uint8_t err = 0;
 
 	err = ISM330DLC_Init(ISM330DLC_XL_ODR_12Hz5, ISM330DLC_2g, ISM330DLC_XL_ANA_BW_400Hz, ISM330DLC_XL_LOW_NOISE_LP_ODR_DIV_100);
@@ -702,7 +703,7 @@ static void Send( void )
     return;
   }
 
-  app_tx_dutycyle = 300000;
+  app_tx_dutycyle = new_tx_dutycyle;
 
 	PRINTF("preSEND\r\n", data);
 
@@ -733,15 +734,15 @@ static void Send( void )
 	PRINTF("%s\r\n", data);
 	}
 
-#if defined(BERK)
-	uint8_t ReadValue = 0;
-	BERKELEY_ReadReg(BERKELEY_REG_ADDR_WHO_AM_I, &ReadValue, 0x01);
-	sprintf((char*)data, "BERK id: %d", ReadValue );
-	PRINTF("%s\r\n", data);
-	BERKELEY_GetAcceleration(&_berkx, &_berky, 500);
-	sprintf((char*)data, "x: %6.4f\r\ny: %6.4f\r\n", _berkx, _berky );
-	PRINTF("%s", data);
-#endif
+//#if defined(ACC)
+//	uint8_t ReadValue = 0;
+//	BERKELEY_ReadReg(BERKELEY_REG_ADDR_WHO_AM_I, &ReadValue, 0x01);
+//	sprintf((char*)data, "BERK id: %d", ReadValue );
+//	PRINTF("%s\r\n", data);
+//	BERKELEY_GetAcceleration(&_berkx, &_berky, 500);
+//	sprintf((char*)data, "x: %6.4f\r\ny: %6.4f\r\n", _berkx, _berky );
+//	PRINTF("%s", data);
+//#endif
 
 //	float t = 0.0;
 //	float h = 0.0;
@@ -819,7 +820,7 @@ static void Send( void )
 	acc_acq(3000, _acc_mean, _acc_min, _acc_max, _acc_std);
 	tilt_acq(3000, _tilt_mean, _tilt_min, _tilt_max, _tilt_std);
 #else
-	acc_acq(500, _acc_mean, _acc_min, _acc_max, _acc_std);
+	acc_acq(3000, _acc_mean, _acc_min, _acc_max, _acc_std);
 #endif
 
 #ifndef ACC
@@ -1018,47 +1019,31 @@ static void LORA_RxData( lora_AppData_t *AppData )
 
   switch (AppData->Port)
   {
-    case 3:
-    /*this port switches the class*/
-    if( AppData->BuffSize == 1 )
-    {
-      switch (  AppData->Buff[0] )
-      {
-        case 0:
-        {
-          LORA_RequestClass(CLASS_A);
-          break;
-        }
-        case 1:
-        {
-          LORA_RequestClass(CLASS_B);
-          break;
-        }
-        case 2:
-        {
-          LORA_RequestClass(CLASS_C);
-          break;
-        }
-        default:
-          break;
-      }
-    }
-    break;
     case LORAWAN_APP_PORT:
-    if( AppData->BuffSize == 1 )
-    {
-      AppLedStateOn = AppData->Buff[0] & 0x01;
-      if ( AppLedStateOn == RESET )
-      {
-        PRINTF("LED OFF\n\r");
-//        LED_Off( LED_BLUE ) ;
-      }
-      else
-      {
-        PRINTF("LED ON\n\r");
-//        LED_On( LED_BLUE ) ;
-      }
-    }
+		switch ( AppData->Buff[0] )
+		{
+			// soft RESET
+			case 1:
+			{
+				sprintf(data,"RESET\n");
+				PRINTF("%s\r\n", data);
+			    NVIC_SystemReset();
+			break;
+			}
+			// change duty-cycle
+			case 2:
+			{
+				// duty-cycle in seconds
+				uint16_t _dc = 180;
+				memcpy(&_dc, &AppData->Buff[1], sizeof(uint16_t));
+				sprintf(data,"duty-cycle %d\n", _dc);
+				PRINTF("%s\r\n", data);
+			    new_tx_dutycyle = _dc * 1000;
+			break;
+			}
+			default:
+			break;
+		}
     break;
   default:
     break;
@@ -1267,6 +1252,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
+	NVIC_SystemReset();
 	PRINTF("Error_Handler\n\r");
 	  while (1);
   /* USER CODE END Error_Handler_Debug */
