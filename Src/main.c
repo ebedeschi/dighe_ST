@@ -82,9 +82,10 @@
 #define ACC
 
 /*!
- * Defines the application data transmission duty cycle. 5s, value in [ms].
+ * Defines the application data transmission duty cycle. value in [ms].
  */
-#define DEFAULT_TX_DUTYCYCLE                            30000
+#define START_TX_DUTYCYCLE                               30000
+#define DEFAULT_TX_DUTYCYCLE                            600000
 /*!
  * LoRaWAN Adaptive Data Rate
  * @note Please note that when ADR is enabled the end-device should be static
@@ -191,10 +192,10 @@ static float acceleration_mg[3];
 static float angular_rate_mdps[3];
 static float temperature_degC;
 static uint8_t whoamI, rst;
-uint8_t flag;
-int16_t _tout, _tout0, _tout1;
-uint32_t app_tx_dutycyle = DEFAULT_TX_DUTYCYCLE;
-uint32_t new_tx_dutycyle = 30000;
+
+uint8_t _start_count = 3;
+uint8_t _first_time_flag = 0;
+uint32_t app_tx_dutycyle = START_TX_DUTYCYCLE;
 
 extern uint8_t timer_ism330dlc_read_acc_data;
 extern uint8_t tim_berkeley_read_tilt_data;
@@ -352,7 +353,7 @@ int main(void)
 
 	ENABLE_IRQ();
 
-// -------------------- S1 S2 ------------------------
+
 //	uint16_t v = 0;
 //	uint8_t res = 0;
 //	res = getVIN(&v);
@@ -364,41 +365,42 @@ int main(void)
 //		PRINTF("%s\r\n", data);
 //	}
 //
-//	uint16_t s1 = 0;
-//	uint16_t s2 = 0;
-//	uint8_t res1 = 0, res2 = 0;
-//	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
-//	HAL_Delay(1000);
-//	//---VSTEPUP---//
-//	res = getVSTEPUP(&v);
-//	if(res == 0)
-//	{
-//		sprintf(data,"VSTEPUP ADC: %d", v);
-//		PRINTF("%s\r\n", data);
-//		sprintf(data,"VSTEPUP I: %f", ((float)v)*0.0072509765625);
-//		PRINTF("%s\r\n", data);
-//	}
-//	//---S1---//
-//	res1 = get420_1(&s1);
-//	//---S2---//
-//	res2 = get420_2(&s2);
-//	if(res1 == 0)
-//	{
-//		sprintf(data,"S1 ADC: %d", s1);
-//		PRINTF("%s\r\n", data);
-//		sprintf(data,"S1 I: %f", (float)((float)s1)*0.000008824359940);
-//		PRINTF("%s\r\n", data);
-//	}
-//	if(res2 == 0)
-//	{
-//		sprintf(data,"S2 ADC: %d", s2);
-//		PRINTF("%s\r\n", data);
-//		sprintf(data,"S2 I: %f", (float)((float)s2)*0.000008824359940);
-//		PRINTF("%s\r\n", data);
-//	}
-//	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
-
-// -------------------- CON RELE'------------------------
+//// -------------------- S1 S2 ------------------------
+////	uint16_t s1 = 0;
+////	uint16_t s2 = 0;
+////	uint8_t res1 = 0, res2 = 0;
+////	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
+////	HAL_Delay(1000);
+////	//---VSTEPUP---//
+////	res = getVSTEPUP(&v);
+////	if(res == 0)
+////	{
+////		sprintf(data,"VSTEPUP ADC: %d", v);
+////		PRINTF("%s\r\n", data);
+////		sprintf(data,"VSTEPUP I: %f", ((float)v)*0.0072509765625);
+////		PRINTF("%s\r\n", data);
+////	}
+////	//---S1---//
+////	res1 = get420_1(&s1);
+////	//---S2---//
+////	res2 = get420_2(&s2);
+////	if(res1 == 0)
+////	{
+////		sprintf(data,"S1 ADC: %d", s1);
+////		PRINTF("%s\r\n", data);
+////		sprintf(data,"S1 I: %f", (float)((float)s1)*0.000008824359940);
+////		PRINTF("%s\r\n", data);
+////	}
+////	if(res2 == 0)
+////	{
+////		sprintf(data,"S2 ADC: %d", s2);
+////		PRINTF("%s\r\n", data);
+////		sprintf(data,"S2 I: %f", (float)((float)s2)*0.000008824359940);
+////		PRINTF("%s\r\n", data);
+////	}
+////	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
+//
+//// -------------------- CON RELE'------------------------
 //	uint16_t s = 0;
 //	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
 //	HAL_Delay(500);
@@ -427,7 +429,7 @@ int main(void)
 //		sprintf(data,"S1a I: %f", (float)((double)s)*0.000008824359940);
 //		PRINTF("%s\r\n", data);
 //	}
-//	HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_RESET);
+//	HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_RESET);
 //	HAL_Delay(1000);
 //	res = get420_1(&s);
 //	HAL_Delay(100);
@@ -438,7 +440,7 @@ int main(void)
 //		sprintf(data,"S1b I: %f", (float)((double)s)*0.000008824359940);
 //		PRINTF("%s\r\n", data);
 //	}
-//	HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_SET);
+//	HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_SET);
 //	HAL_Delay(100);
 //
 //	//---S2---//
@@ -452,7 +454,7 @@ int main(void)
 //		sprintf(data,"S2a I: %f", (float)((double)s)*0.000008824359940);
 //		PRINTF("%s\r\n", data);
 //	}
-//	HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_RESET);
+//	HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_RESET);
 //	HAL_Delay(1000);
 //	res = get420_2(&s);
 //	HAL_Delay(100);
@@ -463,13 +465,13 @@ int main(void)
 //		sprintf(data,"S2b I: %f", (float)((double)s)*0.000008824359940);
 //		PRINTF("%s\r\n", data);
 //	}
-//	HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_SET);
+//	HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_SET);
 //	HAL_Delay(100);
 //
 //	HAL_GPIO_WritePin(EN_PWR_OUT_GPIO_Port, EN_PWR_OUT_Pin, GPIO_PIN_SET);
 //	HAL_Delay(100);
 //	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
-
+//
 //	uint8_t ReadValue = 0;
 //	BERKELEY_ReadReg(BERKELEY_REG_ADDR_WHO_AM_I, &ReadValue, 0x01);
 //	sprintf((char*)data, "BERK id: %d", ReadValue );
@@ -572,7 +574,7 @@ int main(void)
 //	tilt_acq(1000, tilt_mean, tilt_min, tilt_max, tilt_std);
 //
 //
-//	  HAL_Delay(10000);
+//	  HAL_Delay(30000);
   }
   /* USER CODE END 3 */
 }
@@ -703,7 +705,13 @@ static void Send( void )
     return;
   }
 
-  app_tx_dutycyle = new_tx_dutycyle;
+  if(_start_count>0)
+	  _start_count--;
+  if( _start_count == 0 && _first_time_flag == 0)
+  {
+	app_tx_dutycyle = DEFAULT_TX_DUTYCYCLE;
+	_first_time_flag = 1;
+  }
 
 	PRINTF("preSEND\r\n", data);
 
@@ -723,6 +731,7 @@ static void Send( void )
 
 
 	uint16_t v = 0;
+	float vin = 0.0;
 	uint8_t res = 0;
 	res = getVIN(&v);
 	if(res == 0)
@@ -730,7 +739,8 @@ static void Send( void )
 	sprintf(data,"VIN ADC: %d", v);
 	PRINTF("%s\r\n", data);
 	_vin = v;
-	sprintf(data,"VIN I: %f", ((float)v)*0.001611328125);
+	vin = ((float)v)*0.001611328125;
+	sprintf(data,"VIN I: %f", vin);
 	PRINTF("%s\r\n", data);
 	}
 
@@ -825,12 +835,12 @@ static void Send( void )
 
 #ifndef ACC
 	float vstepup = 0;
-	uint8_t c_power = 3;
+	int8_t c_power = 3;
 	do{
 		// STEPUP POWER ON
 		HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
 
-		uint8_t c_time = 4;
+		int8_t c_time = 4;
 		do{
 			HAL_Delay(500);
 			v = 0;
@@ -839,8 +849,10 @@ static void Send( void )
 			vstepup = ((float)v)*0.0072509765625;
 		}while(vstepup < 24 || c_time-- > 0 );
 
+		// STEPUP OK
 		if(vstepup >= 24)
 			break;
+
 		// STEPUP POWER OFF
 		HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
 		HAL_Delay(500);
@@ -855,7 +867,7 @@ static void Send( void )
 		PRINTF("%s\r\n", data);
 	}
 
-	if(vstepup >= 24)
+	if( (vstepup >= 24) && (vin >= 3.4) )
 	{
 #ifndef RELE
 //	 -------------------- SOLO S1 e S2 ------------------------
@@ -904,7 +916,7 @@ static void Send( void )
 			PRINTF("%s\r\n", data);
 		}
 		// SWITCH RELE'
-		HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_RESET);
 		HAL_Delay(300);
 		s = 0;
 		res = get420_1(&s);
@@ -917,7 +929,7 @@ static void Send( void )
 			PRINTF("%s\r\n", data);
 		}
 		// DE-SWITCH RELE'
-		HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_SET);
 
 		//---S2---//
 		s = 0;
@@ -931,7 +943,7 @@ static void Send( void )
 			PRINTF("%s\r\n", data);
 		}
 		// SWITCH RELE'
-		HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_RESET);
 		HAL_Delay(300);
 		s = 0;
 		res = get420_2(&s);
@@ -944,7 +956,7 @@ static void Send( void )
 			PRINTF("%s\r\n", data);
 		}
 		// DE-SWITCH RELE'
-		HAL_GPIO_WritePin(EN_RELE1_GPIO_Port, EN_RELE1_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(EN_RELE2_GPIO_Port, EN_RELE2_Pin, GPIO_PIN_SET);
 		// RELE' BOARD POWER OFF
 		HAL_GPIO_WritePin(EN_PWR_OUT_GPIO_Port, EN_PWR_OUT_Pin, GPIO_PIN_SET);
 		// STEPUP POWER OFF
@@ -1038,7 +1050,7 @@ static void LORA_RxData( lora_AppData_t *AppData )
 				memcpy(&_dc, &AppData->Buff[1], sizeof(uint16_t));
 				sprintf(data,"duty-cycle %d\n", _dc);
 				PRINTF("%s\r\n", data);
-			    new_tx_dutycyle = _dc * 1000;
+			    app_tx_dutycyle = _dc * 1000;
 			break;
 			}
 			default:

@@ -133,7 +133,7 @@
  *
  * \remark see STATIC_DEVICE_EUI comments
  */
-#define LORAWAN_DEVICE_EUI                                 { IEEE_OUI, 0x00, 0x00, 0x00, 0x00, 0x21 }
+#define LORAWAN_DEVICE_EUI                                 { IEEE_OUI, 0x00, 0x00, 0x00, 0x00, 0x22 }
 
 /*!
  * App/Join server IEEE EUI (big endian)

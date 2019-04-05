@@ -142,10 +142,10 @@ void Error_Handler(void);
 #define RADIO_MISO_GPIO_Port GPIOB
 #define RADIO_MOSI_Pin GPIO_PIN_5
 #define RADIO_MOSI_GPIO_Port GPIOB
-#define EN_RELE1_Pin GPIO_PIN_6
-#define EN_RELE1_GPIO_Port GPIOB
-#define EN_RELE2_Pin GPIO_PIN_7
+#define EN_RELE2_Pin GPIO_PIN_6
 #define EN_RELE2_GPIO_Port GPIOB
+#define EN_RELE1_Pin GPIO_PIN_7
+#define EN_RELE1_GPIO_Port GPIOB
 #define EN_PWR_OUT_Pin GPIO_PIN_8
 #define EN_PWR_OUT_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */

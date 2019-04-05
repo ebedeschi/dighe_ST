@@ -75,7 +75,7 @@ void MX_USART3_UART_Init(void)
 //  if(uartHandle->Instance==USART3)
 //  {
 //  /* USER CODE BEGIN USART3_MspInit 0 */
-//
+////
 //  /* USER CODE END USART3_MspInit 0 */
 //    /* USART3 clock enable */
 //    __HAL_RCC_USART3_CLK_ENABLE();
@@ -93,7 +93,7 @@ void MX_USART3_UART_Init(void)
 //    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 //
 //  /* USER CODE BEGIN USART3_MspInit 1 */
-//
+////
 //  /* USER CODE END USART3_MspInit 1 */
 //  }
 //}
@@ -104,7 +104,7 @@ void MX_USART3_UART_Init(void)
 //  if(uartHandle->Instance==USART3)
 //  {
 //  /* USER CODE BEGIN USART3_MspDeInit 0 */
-//
+////
 //  /* USER CODE END USART3_MspDeInit 0 */
 //    /* Peripheral clock disable */
 //    __HAL_RCC_USART3_CLK_DISABLE();
@@ -116,7 +116,7 @@ void MX_USART3_UART_Init(void)
 //    HAL_GPIO_DeInit(GPIOC, DEBUG_USART3_TX_Pin|DEBUG_USART3_RX_Pin);
 //
 //  /* USER CODE BEGIN USART3_MspDeInit 1 */
-//
+////
 //  /* USER CODE END USART3_MspDeInit 1 */
 //  }
 //}
