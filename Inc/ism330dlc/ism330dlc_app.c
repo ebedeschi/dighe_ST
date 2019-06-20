@@ -274,6 +274,7 @@ uint8_t ISM330DLC_Init(ism330dlc_odr_xl_t odr_xl, ism330dlc_fs_xl_t fs_xl, ism33
 	do {
 		ism330dlc_reset_get(&dev_ctx, &rst);
 	} while (rst);
+
 	/*
 	*  Enable Block Data Update
 	*/

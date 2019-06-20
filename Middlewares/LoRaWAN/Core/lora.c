@@ -65,6 +65,14 @@
 
 #if defined( REGION_EU868 )
 
+#define LC4                { 867100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
+#define LC5                { 867300000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
+#define LC6                { 867500000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
+#define LC7                { 867700000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
+#define LC8                { 867900000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
+//#define LC9                { 868800000, 0, { ( ( DR_7 << 4 ) | DR_7 ) }, 2 }
+//#define LC10               { 868300000, 0, { ( ( DR_6 << 4 ) | DR_6 ) }, 1 }
+
 #include "LoRaMacTest.h"
 
 /*!
@@ -122,7 +130,7 @@ static LoRaMainCallback_t *LoRaMainCallbacks;
 
 extern lora_AppData_t AppData;
 
-
+extern uint8_t _check_lora_stack;
 
 
 
@@ -537,7 +545,21 @@ void LORA_Init (LoRaMainCallback_t *callbacks, LoRaParam_t* LoRaParam )
 #if defined( REGION_EU868 )
       LoRaMacTestSetDutyCycleOn( LORAWAN_DUTYCYCLE_ON );
 #endif
-      
+
+#if defined( REGION_EU868 )
+      LoRaMacChannelAdd( 3, ( ChannelParams_t )LC4 );
+      LoRaMacChannelAdd( 4, ( ChannelParams_t )LC5 );
+      LoRaMacChannelAdd( 5, ( ChannelParams_t )LC6 );
+      LoRaMacChannelAdd( 6, ( ChannelParams_t )LC7 );
+      LoRaMacChannelAdd( 7, ( ChannelParams_t )LC8 );
+//      LoRaMacChannelAdd( 8, ( ChannelParams_t )LC9 );
+//      LoRaMacChannelAdd( 9, ( ChannelParams_t )LC10 );
+
+      mibReq.Type = MIB_RX2_CHANNEL;
+      mibReq.Param.Rx2Channel = ( Rx2ChannelParams_t ){ 869525000, DR_3 };
+      LoRaMacMibSetRequestConfirm( &mibReq );
+#endif
+
       mibReq.Type = MIB_SYSTEM_MAX_RX_ERROR;
       mibReq.Param.SystemMaxRxError = 10;
       LoRaMacMibSetRequestConfirm( &mibReq );
@@ -889,6 +911,7 @@ static void TraceDownLinkFrame(McpsIndication_t *mcpsIndication)
                              mcpsIndication->BufferSize, \
                              mcpsIndication->Rssi, \
                              snr );)
+	_check_lora_stack=0;
 }  
 
 

@@ -78,8 +78,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-//#define RELE
-#define ACC
+#define RELE
+//#define ACC
 
 /*!
  * Defines the application data transmission duty cycle. value in [ms].
@@ -197,6 +197,9 @@ uint8_t _start_count = 3;
 uint8_t _first_time_flag = 0;
 uint32_t app_tx_dutycyle = START_TX_DUTYCYCLE;
 
+uint8_t _check_lora_stack = 0;
+uint8_t _max_check_lora_stack = 3;
+
 extern uint8_t timer_ism330dlc_read_acc_data;
 extern uint8_t tim_berkeley_read_tilt_data;
 
@@ -303,17 +306,17 @@ int main(void)
   BERKELEY_Init(208,2000);
 #endif
 	uint8_t err = 0;
-
+	  PRINTF("01\n");
 	err = ISM330DLC_Init(ISM330DLC_XL_ODR_12Hz5, ISM330DLC_2g, ISM330DLC_XL_ANA_BW_400Hz, ISM330DLC_XL_LOW_NOISE_LP_ODR_DIV_100);
 	if(err!=0)
 	{
 	  sprintf(data,"Error: ISM330DLC_Init");
 	  PRINTF("%s\r\n", data);
 	}
-
+	  PRINTF("02\n");
   /* Configure the hardware*/
   HW_Init();
-
+  PRINTF("03\n");
   HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
   HAL_Delay(10000);
   HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
@@ -364,43 +367,58 @@ int main(void)
 //		sprintf(data,"VIN I: %f", ((float)v)*0.001611328125);
 //		PRINTF("%s\r\n", data);
 //	}
-//
+
 //// -------------------- S1 S2 ------------------------
-////	uint16_t s1 = 0;
-////	uint16_t s2 = 0;
-////	uint8_t res1 = 0, res2 = 0;
-////	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
-////	HAL_Delay(1000);
-////	//---VSTEPUP---//
-////	res = getVSTEPUP(&v);
-////	if(res == 0)
-////	{
-////		sprintf(data,"VSTEPUP ADC: %d", v);
-////		PRINTF("%s\r\n", data);
-////		sprintf(data,"VSTEPUP I: %f", ((float)v)*0.0072509765625);
-////		PRINTF("%s\r\n", data);
-////	}
-////	//---S1---//
-////	res1 = get420_1(&s1);
-////	//---S2---//
-////	res2 = get420_2(&s2);
-////	if(res1 == 0)
-////	{
-////		sprintf(data,"S1 ADC: %d", s1);
-////		PRINTF("%s\r\n", data);
-////		sprintf(data,"S1 I: %f", (float)((float)s1)*0.000008824359940);
-////		PRINTF("%s\r\n", data);
-////	}
-////	if(res2 == 0)
-////	{
-////		sprintf(data,"S2 ADC: %d", s2);
-////		PRINTF("%s\r\n", data);
-////		sprintf(data,"S2 I: %f", (float)((float)s2)*0.000008824359940);
-////		PRINTF("%s\r\n", data);
-////	}
-////	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
+//	float _s1 = 0.0;
+//	float _s2 = 0.0;
+//	float _p = 0.0;
+//	float _t = 0.0;
 //
-//// -------------------- CON RELE'------------------------
+//	uint16_t s1 = 0;
+//	uint16_t s2 = 0;
+//	uint8_t res1 = 0, res2 = 0;
+//	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
+//	HAL_Delay(1000);
+//	//---VSTEPUP---//
+//	res = getVSTEPUP(&v);
+//	if(res == 0)
+//	{
+//		sprintf(data,"VSTEPUP ADC: %d", v);
+//		PRINTF("%s\r\n", data);
+//		sprintf(data,"VSTEPUP I: %f", ((float)v)*0.0072509765625);
+//		PRINTF("%s\r\n", data);
+//	}
+//	//---S1---//
+//	res1 = get420_1(&s1);
+//	//---S2---//
+//	res2 = get420_2(&s2);
+//	if(res1 == 0)
+//	{
+//		sprintf(data,"S1 ADC: %d", s1);
+//		PRINTF("%s\r\n", data);
+//		_s1 = (float)((float)s1)*0.000008824359940;
+//		sprintf(data,"S1 I: %f", _s1);
+//		PRINTF("%s\r\n", data);
+//	}
+//	if(res2 == 0)
+//	{
+//		sprintf(data,"S2 ADC: %d", s2);
+//		PRINTF("%s\r\n", data);
+//		_s2 = ((float)s2)*0.000008824359940;
+//		sprintf(data,"S2 I: %f", _s2);
+//		PRINTF("%s\r\n", data);
+//	}
+//	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_RESET);
+//
+//	_p=(_s1*1000000-4000)*0.00015625;
+//	sprintf(data,"--> S1 P: %fbar", _p);
+//	PRINTF("%s\r\n", data);
+//
+//	_t=(_s2*1000000-4000)*0.001875;
+//	sprintf(data,"--> S2 T: %f°C", _t);
+//	PRINTF("%s\r\n", data);
+
+// -------------------- CON RELE'------------------------
 //	uint16_t s = 0;
 //	HAL_GPIO_WritePin(EN_STEPUP_GPIO_Port, EN_STEPUP_Pin, GPIO_PIN_SET);
 //	HAL_Delay(500);
@@ -484,25 +502,25 @@ int main(void)
 //	BERKELEY_GetAcceleration(&ber_x, &ber_y, 2000);
 //	sprintf((char*)data, "x: %6.6f\r\ny: %6.6f\r\n", ber_x, ber_y );
 //	PRINTF("%s", data);
-//
-//
-////	HTS221Sensor(&hi2c2, HTS221_I2C_ADDRESS);
-////	HTS221SensorEnable();
-////	uint8_t id = 0;
-////	HTS221SensorReadID(&id);
-////	sprintf((char*)data, "id: %d", id );
-////	PRINTF("%s\r\n", data);
-////	HAL_Delay(100);
-////	float temp = 0;
-////	HTS221SensorGetTemperature(&temp);
-////	sprintf((char*)data, "Temp: %6.2f", temp );
-////	PRINTF("%s\r\n", data);
-////	float hum = 0;
-////	HTS221SensorGetHumidity(&hum);
-////	sprintf((char*)data, "Hum: %6.2f", hum );
-////	PRINTF("%s\r\n", data);
-////	HTS221SensorDisable();
-//
+
+
+//	HTS221Sensor(&hi2c2, HTS221_I2C_ADDRESS);
+//	HTS221SensorEnable();
+//	uint8_t id = 0;
+//	HTS221SensorReadID(&id);
+//	sprintf((char*)data, "id: %d", id );
+//	PRINTF("%s\r\n", data);
+//	HAL_Delay(100);
+//	float temp = 0;
+//	HTS221SensorGetTemperature(&temp);
+//	sprintf((char*)data, "Temp: %6.2f", temp );
+//	PRINTF("%s\r\n", data);
+//	float hum = 0;
+//	HTS221SensorGetHumidity(&hum);
+//	sprintf((char*)data, "Hum: %6.2f", hum );
+//	PRINTF("%s\r\n", data);
+//	HTS221SensorDisable();
+
 //	HTS221_Init();
 //	uint8_t id = 0;
 //	HTS221_ReadID(&id);
@@ -559,8 +577,8 @@ int main(void)
 //	  sprintf((char*)data, "Temperature [degC]:%6.2f", t);
 //	  PRINTF("%s\r\n", data);
 //	}
-//
-//
+
+
 //	int16_t acc_mean[3] = {0.0};
 //	uint16_t acc_std[3] = {0.0};
 //	int16_t acc_min[3] = {0.0};
@@ -572,9 +590,9 @@ int main(void)
 //	int16_t tilt_min[3] = {0.0};
 //	int16_t tilt_max[3] = {0.0};
 //	tilt_acq(1000, tilt_mean, tilt_min, tilt_max, tilt_std);
-//
-//
-//	  HAL_Delay(30000);
+
+
+//	  HAL_Delay(10000);
   }
   /* USER CODE END 3 */
 }
@@ -669,6 +687,18 @@ static void Send( void )
   /* USER CODE BEGIN 3 */
 
 	PRINTF("preSEND\r\n", data);
+
+	sprintf(data,"check_lora_stack: %d", _check_lora_stack);
+	PRINTF("%s\r\n", data);
+	// check lora stack is running
+	if(_check_lora_stack++ >= _max_check_lora_stack)
+	{
+		sprintf(data,"RESET\n");
+		PRINTF("%s\r\n", data);
+	    NVIC_SystemReset();
+	}
+
+	bool resultSend = false;
 
 	uint16_t _vin = 0.0;
 	int16_t _temp = 0.0;
@@ -1018,7 +1048,13 @@ static void Send( void )
 
   AppData.BuffSize = i;
 
-  LORA_send( &AppData, LORAWAN_DEFAULT_CONFIRM_MSG_STATE);
+  resultSend = LORA_send( &AppData, LORAWAN_DEFAULT_CONFIRM_MSG_STATE);
+  if(resultSend == true)
+	  sprintf(data,"resultSend: true");
+  else
+	  sprintf(data,"resultSend: false");
+  PRINTF("%s\r\n", data);
+
 
   /* USER CODE END 3 */
 }
@@ -1133,7 +1169,7 @@ void acc_acq(uint16_t ms, int16_t* acc_mean, int16_t* acc_min, int16_t* acc_max,
 	timer_ism330dlc_read_acc_data = 0;
 	TimerInit( &AccTimer, EndAccAcqusitionTimerEvent );
 	TimerSetValue( &AccTimer,  ms);
-	TimerStart( &AccTimer);
+//	TimerStart( &AccTimer);
 
 	sprintf((char*)data, "start acc timer");
 	PRINTF("%s\r\n", data);
@@ -1200,7 +1236,7 @@ void tilt_acq(uint16_t ms, int16_t* tilt_mean, int16_t* tilt_min, int16_t* tilt_
 	tim_berkeley_read_tilt_data = 0;
 	TimerInit( &TiltTimer, EndTiltAcqusitionTimerEvent );
 	TimerSetValue( &TiltTimer,  ms);
-	TimerStart( &TiltTimer);
+//	TimerStart( &TiltTimer);
 
 	sprintf((char*)data, "start tilt timer");
 	PRINTF("%s\r\n", data);
