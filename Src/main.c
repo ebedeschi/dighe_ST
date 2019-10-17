@@ -745,6 +745,9 @@ static void Send( void )
 
 	PRINTF("preSEND\r\n", data);
 
+	sprintf(data,"duty-cycle %d\n", app_tx_dutycyle);
+	PRINTF("%s\r\n", data);
+
 	uint32_t i = 0;
 	AppData.Port = LORAWAN_APP_PORT;
 
@@ -1063,7 +1066,7 @@ static void Send( void )
 static void LORA_RxData( lora_AppData_t *AppData )
 {
   /* USER CODE BEGIN 4 */
-  PRINTF("PACKET RECEIVED ON PORT %d\n\r", AppData->Port);
+//  PRINTF("PACKET RECEIVED ON PORT %d\n\r", AppData->Port);
 
   switch (AppData->Port)
   {
@@ -1073,8 +1076,8 @@ static void LORA_RxData( lora_AppData_t *AppData )
 			// soft RESET
 			case 1:
 			{
-				sprintf(data,"RESET\n");
-				PRINTF("%s\r\n", data);
+//				sprintf(data,"RESET\n");
+//				PRINTF("%s\r\n", data);
 			    NVIC_SystemReset();
 			break;
 			}
@@ -1084,9 +1087,11 @@ static void LORA_RxData( lora_AppData_t *AppData )
 				// duty-cycle in seconds
 				uint16_t _dc = 180;
 				memcpy(&_dc, &AppData->Buff[1], sizeof(uint16_t));
-				sprintf(data,"duty-cycle %d\n", _dc);
-				PRINTF("%s\r\n", data);
-			    app_tx_dutycyle = _dc * 1000;
+//				sprintf(data,"duty-cycle %d\n", _dc);
+//				PRINTF("%s\r\n", data);
+				// 		1min			3min			5min			10min			30min			1ora			3ore
+				if( (_dc == 60) || (_dc == 180) || (_dc == 300) || (_dc == 600) || (_dc == 1800) || (_dc == 3600) || (_dc == 10800) )
+					app_tx_dutycyle = _dc * 1000;
 			break;
 			}
 			default:
